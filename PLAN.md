@@ -20,7 +20,7 @@ SaaS za agencije BZR (bezbednost i zdravlje na radu): klijenti, zaposleni, rokov
 
 ---
 
-## Status po fazama (stanje: mart 2026)
+## Status po fazama (stanje: mart 2026, ažurirano 2026-03-31)
 
 ### Faza 1 — Plan i arhitektura
 - **Gotovo.** Plan je bio u originalnom četu; arhitektura je usklađena sa implementacijom (monolit Next, BFF rute, multi-tenant po `agency_id`).
@@ -40,8 +40,9 @@ SaaS za agencije BZR (bezbednost i zdravlje na radu): klijenti, zaposleni, rokov
 - **Nije:** OAuth, pozivnice kao pun UI tok, pojedinačne zaštite po ulogama za sve buduće stranice.
 
 ### Faza 5 — Glavne funkcije (backend)
-- **Delimično gotovo.** Implementirane rute (pregled): `me`, `clients`, `clients/[id]`, `clients/[id]/employees`, `clients/[id]/documents`, `employees/[id]`, `deadlines`, `notifications`, `notifications/[id]/read`, `auth/bootstrap-agency`, Stripe, admin `agencies/[id]`, `profiles/[userId]`.
-- **Nije / sledeće iz master plana:** teren (`field-visits`, sync), glas/AI, inspekcija, readiness PDF, pravna baza, Excel/API import, generisanje PDF obrazaca, enterprise API, pozivnice, `agency` CRUD rute iz plana, itd.
+- **Delimično gotovo.** Implementirane rute (pregled): `me`, **`GET/PATCH /api/agency`** (podaci agencije; **PATCH** samo **`agency_owner`**, šema `agencyPatchSchema`), **`GET /api/agency/members`** (lista `agency_members` sa ugnježđenim `profiles`), `clients`, `clients/[id]`, `clients/[id]/employees`, `clients/[id]/documents`, `employees/[id]`, `deadlines`, `notifications`, `notifications/[id]/read`, `auth/bootstrap-agency`, Stripe, admin `agencies/[id]`, `profiles/[userId]`.
+- **Zaštita uloga:** u `lib/api/session.ts` — među ostalim **`isClientPortalUser`** (`client_user`) nema pristup agencijskim rutama koje vraćaju 403; čitanje agencijskih zapisa za članove sa `agency_id` preko **`canReadAgencyRecords`**.
+- **Nije / sledeće iz master plana:** teren (`field-visits`, sync), glas/AI, inspekcija, readiness PDF, pravna baza, Excel/API import, generisanje PDF obrazaca, enterprise API, pozivnice kao pun tok, itd.
 
 ### Faza 6 — Error handling i edge case-ovi
 - **Delimično gotovo.** Zod šeme u `lib/api/schemas.ts`, `withApiCatch`, `readJsonBody` sa limitom, JSON greške sa `code`, rate limit po IP na `/api/*` (`lib/rate-limit/middleware`), Stripe webhook idempotencija preko tabele `stripe_events` (idempotentna obrada eventa), kolone privilegije na `profiles` (samo `full_name`, `locale` za `authenticated`), provera **`SEAT_LIMIT`** pri admin `PATCH` profila (dodela u agenciju).
@@ -75,6 +76,7 @@ SaaS za agencije BZR (bezbednost i zdravlje na radu): klijenti, zaposleni, rokov
 |--------|--------|
 | Jezgro baza + RLS + auth trigger | Urađeno |
 | API: klijenti, zaposleni, dokumenti, rokovi, notifikacije | Urađeno |
+| API: agencija (`/api/agency`), članovi (`/api/agency/members`) | Urađeno |
 | Stripe: 3 plana, mesečno/godišnje, cene iz API-ja, webhook, portal | Urađeno (šest Price ID u env + isti test/live kao secret) |
 | Limit mesta po planu (admin dodela) | Urađeno |
 | Admin: liste, audit, brisanje agencije | Urađeno |
@@ -91,7 +93,9 @@ SaaS za agencije BZR (bezbednost i zdravlje na radu): klijenti, zaposleni, rokov
 - Reset (dev): `supabase/scripts/reset-phase3-dev-only.sql`
 - Planovi i limiti: `lib/plans/catalog.ts`, `lib/plans/seats.ts`
 - Stripe: `lib/stripe/prices.ts`, `lib/stripe/plan-price-quotes.ts`, `lib/stripe/env.ts`, sinhronizacija pretplate npr. `lib/stripe/sync-agency.ts`
-- API: `app/api/stripe/plan-prices/route.ts`, `checkout-session`, `portal`, `webhook`
+- API: `app/api/agency/route.ts`, `app/api/agency/members/route.ts`; Stripe: `app/api/stripe/plan-prices/route.ts`, `checkout-session`, `portal`, `webhook`
+- Validacija: `lib/api/schemas.ts` (uklj. `agencyPatchSchema`, admin šeme)
+- Sesija / uloge: `lib/api/session.ts`
 - UI naplate: `components/dashboard/stripe-billing.tsx`
 - Env šablon: `.env.example`
 
@@ -113,4 +117,9 @@ Redovno održavati: datum poslednjeg ažuriranja, realan status faza, operativne
 - **Dokumentacija:** ovaj `PLAN.md` kao izvor istine za faze i reference fajlova.
 - **Sledeće (predlog):** Faza 9 — i18n sr/en, landing i ostale stranice iz briefa; po prioritetu proširenje Faze 5 (teren, import, portal klijenta, itd.); E2E i deploy kada bude vreme.
 
-*Poslednje ažuriranje: 2026-03-29.*
+### Žurnal (2026-03-31)
+
+- **Faza 5 — agencijski API:** `GET /api/agency` i `PATCH /api/agency` (vlasnik menja `name`, `legal_name`, `tax_id`, `address`, `phone`); `GET /api/agency/members` (članovi + profili). Pomoćne funkcije u `lib/api/session.ts` (`isClientPortalUser`, `canManageAgencyBilling`, itd.); validacija `agencyPatchSchema` u `lib/api/schemas.ts`.
+- **GitHub:** repozitorijum `goranadokmanovic/safenest-bzr` (privatan), `.env*.local` i osetljivi scratch fajlovi izvan repoa.
+
+*Poslednje ažuriranje: 2026-03-31.*

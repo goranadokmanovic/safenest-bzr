@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { AGENCY_PLAN_IDS } from "@/lib/plans/catalog";
 
 export const clientCreateSchema = z.object({
   agency_id: z.string().uuid().optional(),
@@ -59,9 +60,27 @@ export const deadlinesQuerySchema = z.object({
 });
 
 export const stripeCheckoutBodySchema = z.object({
-  planId: z.enum(["agency_basic", "agency_l", "agency_xl"]),
+  planId: z.enum(AGENCY_PLAN_IDS),
   billingInterval: z.enum(["month", "year"]),
 });
+
+export const agencyPatchSchema = z
+  .object({
+    name: z.string().min(1).max(500).optional(),
+    legal_name: z.union([z.string().max(500), z.literal(""), z.null()]).optional(),
+    tax_id: z.union([z.string().max(100), z.literal(""), z.null()]).optional(),
+    address: z.union([z.string().max(1000), z.literal(""), z.null()]).optional(),
+    phone: z.union([z.string().max(50), z.literal(""), z.null()]).optional(),
+  })
+  .refine(
+    (d) =>
+      d.name !== undefined ||
+      d.legal_name !== undefined ||
+      d.tax_id !== undefined ||
+      d.address !== undefined ||
+      d.phone !== undefined,
+    { message: "Pošalji bar jedno polje za izmenu." },
+  );
 
 /** Admin: izmena pretplate agencije (vrednosti usklađene sa Stripe statusima). */
 export const adminAgencyPatchSchema = z
@@ -78,7 +97,7 @@ export const adminAgencyPatchSchema = z
         "paused",
       ])
       .optional(),
-    plan_tier: z.string().min(1).max(64).optional(),
+    plan_tier: z.enum(AGENCY_PLAN_IDS).optional(),
     trial_ends_at: z.union([z.string().min(4).max(40), z.null()]).optional(),
     /** Mora biti true — UI šalje nakon potvrde čekboksom. */
     acknowledge: z.literal(true),

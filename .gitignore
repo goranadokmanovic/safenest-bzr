@@ -1,0 +1,12 @@
+/node_modules
+/.next/
+/out/
+.env
+.env*.local
+*.tsbuildinfo
+.DS_Store
+npm-debug.log*
+.vercel
+
+# lokalni scratch / beleske (ne commitovati)
+Untitled

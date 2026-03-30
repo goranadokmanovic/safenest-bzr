@@ -1,0 +1,14 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --color-accent: #f5c800;
+  --color-ink: #111111;
+  --color-surface: #ffffff;
+}
+
+body {
+  color: var(--color-ink);
+  background: var(--color-surface);
+}

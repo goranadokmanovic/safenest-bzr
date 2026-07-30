@@ -11,13 +11,14 @@ import {
   listAgencyWorkers,
   listFieldVisitsForAgency,
 } from "@/lib/field-visits/list";
+import { applyClientScope, clientIdsInScope } from "@/lib/api/client-scope";
 import { BackButton } from "@/components/ui/BackButton";
 import { PageCornerDecor } from "@/components/brand/PageCornerDecor";
 
 export const dynamic = "force-dynamic";
 
 export default async function AgencijaTerenskePosetePage() {
-  const { agency_id, user } = await assertAgencyStaffUser();
+  const { agency_id, user, role } = await assertAgencyStaffUser();
   const locale = await getUserLocale();
   const m = getMessages(locale);
   const fv = m.dashboard.fieldVisits;
@@ -46,11 +47,20 @@ export default async function AgencijaTerenskePosetePage() {
     }
   }
 
-  const { data: clients } = await supabase
-    .from("client_companies")
-    .select("id, name")
-    .eq("agency_id", agency_id)
-    .is("archived_at", null);
+  const visible = await clientIdsInScope(supabase, {
+    user_id: user.id,
+    role,
+    agency_id,
+  });
+
+  const { data: clients } = await applyClientScope(
+    supabase
+      .from("client_companies")
+      .select("id, name")
+      .eq("agency_id", agency_id)
+      .is("archived_at", null),
+    visible.ok ? visible.clientIds : [],
+  );
 
   for (const c of clients ?? []) {
     clientNames[c.id] = c.name;

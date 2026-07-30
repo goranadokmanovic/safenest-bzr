@@ -3,6 +3,7 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { getUserLocale } from "@/lib/i18n/server";
 import { getMessages } from "@/lib/i18n";
 import { listAgencyCollaborators } from "@/lib/field-visits/list";
+import { applyClientScope, clientIdsInScope } from "@/lib/api/client-scope";
 import { ClientForm } from "@/components/admin/ClientForm";
 import { ClientsList, type ClientRow } from "@/components/admin/ClientsList";
 import { BackButton } from "@/components/ui/BackButton";
@@ -11,25 +12,36 @@ import { PageCornerDecor } from "@/components/brand/PageCornerDecor";
 export const dynamic = "force-dynamic";
 
 export default async function AgencijaKlijentiPage() {
-  const { agency_id } = await assertAgencyStaffUser();
+  const { agency_id, user, role } = await assertAgencyStaffUser();
   const locale = await getUserLocale();
   const m = getMessages(locale);
   const c = m.admin.clients;
 
   const supabase = await createServerSupabaseClient();
 
+  const visible = await clientIdsInScope(supabase, {
+    user_id: user.id,
+    role,
+    agency_id,
+  });
+
+  const clientsQuery = applyClientScope(
+    supabase
+      .from("client_companies")
+      .select(
+        "id, name, tax_id, activity_sector, address, operation_addresses, contact_email, created_at, agency_id, archived_at, assigned_collaborator_id",
+      )
+      .eq("agency_id", agency_id)
+      .is("archived_at", null)
+      .order("created_at", { ascending: false })
+      .limit(500),
+    visible.ok ? visible.clientIds : [],
+  );
+
   const [{ data: agency }, { data: rows, error }, collaborators] =
     await Promise.all([
       supabase.from("agencies").select("id, name").eq("id", agency_id).single(),
-      supabase
-        .from("client_companies")
-        .select(
-          "id, name, tax_id, activity_sector, address, operation_addresses, contact_email, created_at, agency_id, archived_at, assigned_collaborator_id",
-        )
-        .eq("agency_id", agency_id)
-        .is("archived_at", null)
-        .order("created_at", { ascending: false })
-        .limit(500),
+      clientsQuery,
       listAgencyCollaborators(supabase, agency_id),
     ]);
 
@@ -44,7 +56,8 @@ export default async function AgencijaKlijentiPage() {
   );
 
   let clients: ClientRow[] = [];
-  let loadError: string | null = error?.message ?? null;
+  let loadError: string | null =
+    error?.message ?? (visible.ok ? null : visible.message);
 
   if (!loadError && rows) {
     clients = rows.map((row) => ({

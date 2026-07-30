@@ -5,6 +5,7 @@ import { AgencyBootstrap } from "@/components/auth/agency-bootstrap";
 import { LogoutButton } from "@/components/auth/logout-button";
 import { StripeBillingSection } from "@/components/dashboard/stripe-billing";
 import { canManageAgencyBilling } from "@/lib/api/session";
+import { applyClientScope, clientIdsInScope } from "@/lib/api/client-scope";
 import { isStripeCheckoutConfigured } from "@/lib/stripe/env";
 import { isAgencyStaffRole, parseAppRole } from "@/lib/auth/roles";
 import { BackButton } from "@/components/ui/BackButton";
@@ -104,12 +105,21 @@ export default async function DashboardPage() {
     }
 
     if (isAgencyStaff) {
+      const visible = await clientIdsInScope(supabase, {
+        user_id: user.id,
+        role: profile.role,
+        agency_id: profile.agency_id,
+      });
+
       const [clientsRes, visitsRes] = await Promise.all([
-        supabase
-          .from("client_companies")
-          .select("id", { count: "exact", head: true })
-          .eq("agency_id", profile.agency_id)
-          .is("archived_at", null),
+        applyClientScope(
+          supabase
+            .from("client_companies")
+            .select("id", { count: "exact", head: true })
+            .eq("agency_id", profile.agency_id)
+            .is("archived_at", null),
+          visible.ok ? visible.clientIds : [],
+        ),
         supabase
           .from("field_visits")
           .select("id", { count: "exact", head: true })

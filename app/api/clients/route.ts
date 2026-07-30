@@ -5,6 +5,11 @@ import {
 } from "@/lib/api/session";
 import { getMutationContext } from "@/lib/api/mutation-guards";
 import { agencyFilterForList, agencyIdForInsert } from "@/lib/api/agency-scope";
+import {
+  applyClientScope,
+  clientIdsInScope,
+  isScopedCollaborator,
+} from "@/lib/api/client-scope";
 import { jsonError, jsonOk } from "@/lib/api/responses";
 import { clientCreateSchema, normalizeOperationAddresses } from "@/lib/api/schemas";
 import { resolveAssignedCollaboratorId } from "@/lib/api/client-assigned-collaborator";
@@ -33,6 +38,11 @@ export const GET = withApiCatch(async (request: Request) => {
   const scope = agencyFilterForList(profile, agencyParam);
   if ("error" in scope) return scope.error;
 
+  const visible = await clientIdsInScope(supabase, profile);
+  if (!visible.ok) {
+    return jsonError(visible.message, 400, { code: "DATABASE_ERROR" });
+  }
+
   let query = supabase
     .from("client_companies")
     .select("*")
@@ -41,6 +51,8 @@ export const GET = withApiCatch(async (request: Request) => {
   if (scope.agencyId) {
     query = query.eq("agency_id", scope.agencyId);
   }
+
+  query = applyClientScope(query, visible.clientIds);
 
   if (!includeArchived) {
     query = query.is("archived_at", null);
@@ -81,10 +93,24 @@ export const POST = withApiCatch(async (request: Request) => {
   const agency = agencyIdForInsert(profile, parsed.data.agency_id);
   if ("error" in agency) return agency.error;
 
+  // Saradnik bi inače kreirao klijenta koji odmah ispada iz njegovog opsega.
+  // Isto pravilo stoji u client_companies_insert RLS politici.
+  let requestedAssignee = parsed.data.assigned_collaborator_id;
+  if (isScopedCollaborator(profile)) {
+    if (requestedAssignee && requestedAssignee !== profile.user_id) {
+      return jsonError(
+        "Saradnik može da kreira samo klijenta zaduženog za sebe.",
+        403,
+        { code: "FORBIDDEN" },
+      );
+    }
+    requestedAssignee = profile.user_id;
+  }
+
   const assigned = await resolveAssignedCollaboratorId(
     supabase,
     agency.agencyId,
-    parsed.data.assigned_collaborator_id,
+    requestedAssignee,
   );
   if (!assigned.ok) return assigned.response;
 

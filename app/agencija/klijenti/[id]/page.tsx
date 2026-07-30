@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { assertAgencyStaffUser } from "@/lib/agency/gate";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { listAgencyCollaborators } from "@/lib/field-visits/list";
+import { checkClientInScope } from "@/lib/api/client-scope";
 import { isUuid } from "@/lib/api/agency-scope";
 import { BackButton } from "@/components/ui/BackButton";
 import { PageCornerDecor } from "@/components/brand/PageCornerDecor";
@@ -28,12 +29,19 @@ export default async function ClientDetailPage({
   params,
   searchParams,
 }: Params) {
-  const { agency_id } = await assertAgencyStaffUser();
+  const { agency_id, user, role } = await assertAgencyStaffUser();
   const { id } = await params;
   const sp = await searchParams;
   if (!isUuid(id)) notFound();
 
   const supabase = await createServerSupabaseClient();
+
+  const scope = await checkClientInScope(
+    supabase,
+    { user_id: user.id, role, agency_id },
+    id,
+  );
+  if (!scope.ok) notFound();
 
   const [{ data: agency }, { data: row, error }, collaborators] =
     await Promise.all([

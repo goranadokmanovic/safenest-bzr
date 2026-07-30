@@ -2,12 +2,17 @@ import {
   getAuthContext,
   canReadAgencyRecords,
   isClientPortalUser,
-  isSuperAdmin,
 } from "@/lib/api/session";
 import { getMutationContext } from "@/lib/api/mutation-guards";
 import { jsonError, jsonOk } from "@/lib/api/responses";
 import { clientPatchSchema, normalizeOperationAddresses } from "@/lib/api/schemas";
 import { resolveAssignedCollaboratorId } from "@/lib/api/client-assigned-collaborator";
+import {
+  evaluateClientScope,
+  isScopedCollaborator,
+  requireClientInScope,
+  type ClientScopeRow,
+} from "@/lib/api/client-scope";
 import { isUuid } from "@/lib/api/agency-scope";
 import { readJsonBody } from "@/lib/api/read-json";
 import { withApiCatch } from "@/lib/api/with-api-catch";
@@ -46,12 +51,15 @@ export const GET = withApiCatch(async (_request: Request, { params }: Params) =>
     return jsonError("Klijent nije pronađen.", 404, { code: "NOT_FOUND" });
   }
 
-  if (
-    !isSuperAdmin(profile) &&
-    profile.agency_id &&
-    data.agency_id !== profile.agency_id
-  ) {
-    return jsonError("Nema pristupa.", 403, { code: "FORBIDDEN" });
+  const scope = await evaluateClientScope(
+    supabase,
+    profile,
+    data as ClientScopeRow,
+  );
+  if (!scope.ok) {
+    return jsonError(scope.message, scope.reason === "error" ? 400 : 403, {
+      code: scope.reason === "error" ? "DATABASE_ERROR" : "FORBIDDEN",
+    });
   }
 
   return jsonOk({ client: data });
@@ -78,23 +86,9 @@ export const PATCH = withApiCatch(async (request: Request, { params }: Params) =
     });
   }
 
-  const { data: existing, error: loadErr } = await supabase
-    .from("client_companies")
-    .select("id, agency_id")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (loadErr || !existing) {
-    return jsonError("Klijent nije pronađen.", 404, { code: "NOT_FOUND" });
-  }
-
-  if (
-    !isSuperAdmin(profile) &&
-    profile.agency_id &&
-    existing.agency_id !== profile.agency_id
-  ) {
-    return jsonError("Nema pristupa.", 403, { code: "FORBIDDEN" });
-  }
+  const scope = await requireClientInScope(supabase, profile, id);
+  if (!scope.ok) return scope.response;
+  const existing = scope.client;
 
   const patch: Record<string, unknown> = { ...parsed.data };
   if (parsed.data.contact_email === "") {
@@ -108,6 +102,19 @@ export const PATCH = withApiCatch(async (request: Request, { params }: Params) =
   delete patch.agency_id;
 
   if ("assigned_collaborator_id" in parsed.data) {
+    // Prebacivanje klijenta na drugog saradnika izbacilo bi red iz opsega
+    // pošiljaoca; isto blokira i client_companies_update WITH CHECK.
+    if (
+      isScopedCollaborator(profile) &&
+      parsed.data.assigned_collaborator_id !== profile.user_id
+    ) {
+      return jsonError(
+        "Zaduženog saradnika može da menja samo vlasnik agencije.",
+        403,
+        { code: "FORBIDDEN" },
+      );
+    }
+
     const assigned = await resolveAssignedCollaboratorId(
       supabase,
       existing.agency_id,
@@ -151,23 +158,8 @@ export const DELETE = withApiCatch(async (_request: Request, { params }: Params)
     return jsonError("Nevažeći id.", 400, { code: "INVALID_ID" });
   }
 
-  const { data: existing, error: loadErr } = await supabase
-    .from("client_companies")
-    .select("id, agency_id")
-    .eq("id", id)
-    .maybeSingle();
-
-  if (loadErr || !existing) {
-    return jsonError("Klijent nije pronađen.", 404, { code: "NOT_FOUND" });
-  }
-
-  if (
-    !isSuperAdmin(profile) &&
-    profile.agency_id &&
-    existing.agency_id !== profile.agency_id
-  ) {
-    return jsonError("Nema pristupa.", 403, { code: "FORBIDDEN" });
-  }
+  const scope = await requireClientInScope(supabase, profile, id);
+  if (!scope.ok) return scope.response;
 
   const { data, error } = await supabase
     .from("client_companies")

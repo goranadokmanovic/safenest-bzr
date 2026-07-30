@@ -5,6 +5,7 @@ import {
   isClientPortalUser,
   isSuperAdmin,
 } from "@/lib/api/session";
+import { requireClientInScope } from "@/lib/api/client-scope";
 import { insertDetailedAudit } from "@/lib/api/detailed-audit";
 import { jsonError, jsonOk } from "@/lib/api/responses";
 import { fieldVisitCreateSchema } from "@/lib/api/schemas";
@@ -67,23 +68,13 @@ export const POST = withApiCatch(async (request: Request) => {
     return jsonError("Niste dodeljeni agenciji.", 403, { code: "FORBIDDEN" });
   }
 
-  const { data: client, error: clientErr } = await supabase
-    .from("client_companies")
-    .select("id, agency_id")
-    .eq("id", parsed.data.client_company_id)
-    .maybeSingle();
-
-  if (clientErr || !client) {
-    return jsonError("Klijent nije pronađen.", 404, { code: "NOT_FOUND" });
-  }
-
-  if (
-    !isSuperAdmin(profile) &&
-    profile.agency_id &&
-    client.agency_id !== profile.agency_id
-  ) {
-    return jsonError("Nema pristupa tom klijentu.", 403, { code: "FORBIDDEN" });
-  }
+  const scope = await requireClientInScope(
+    supabase,
+    profile,
+    parsed.data.client_company_id,
+  );
+  if (!scope.ok) return scope.response;
+  const client = scope.client;
 
   const parentVisitId: string | null = parsed.data.parent_visit_id ?? null;
   if (parentVisitId) {

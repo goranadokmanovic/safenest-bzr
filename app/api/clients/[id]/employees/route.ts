@@ -1,26 +1,17 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getAuthContext,
   canReadAgencyRecords,
   isClientPortalUser,
-  isSuperAdmin,
 } from "@/lib/api/session";
 import { getMutationContext } from "@/lib/api/mutation-guards";
 import { jsonError, jsonOk } from "@/lib/api/responses";
 import { employeeBulkCreateSchema } from "@/lib/api/schemas";
+import { requireClientInScope } from "@/lib/api/client-scope";
 import { isUuid } from "@/lib/api/agency-scope";
 import { readJsonBody } from "@/lib/api/read-json";
 import { withApiCatch } from "@/lib/api/with-api-catch";
 
 type Params = { params: Promise<{ id: string }> };
-
-async function loadClientAgency(supabase: SupabaseClient, clientId: string) {
-  return supabase
-    .from("client_companies")
-    .select("id, agency_id")
-    .eq("id", clientId)
-    .maybeSingle();
-}
 
 export const GET = withApiCatch(async (_request: Request, { params }: Params) => {
   const auth = await getAuthContext();
@@ -41,21 +32,8 @@ export const GET = withApiCatch(async (_request: Request, { params }: Params) =>
     return jsonError("Nevažeći id klijenta.", 400, { code: "INVALID_ID" });
   }
 
-  const { data: client, error: cErr } = await loadClientAgency(
-    supabase,
-    clientId,
-  );
-  if (cErr || !client) {
-    return jsonError("Klijent nije pronađen.", 404, { code: "NOT_FOUND" });
-  }
-
-  if (
-    !isSuperAdmin(profile) &&
-    profile.agency_id &&
-    client.agency_id !== profile.agency_id
-  ) {
-    return jsonError("Nema pristupa.", 403, { code: "FORBIDDEN" });
-  }
+  const scope = await requireClientInScope(supabase, profile, clientId);
+  if (!scope.ok) return scope.response;
 
   const { data, error } = await supabase
     .from("employees")
@@ -92,24 +70,11 @@ export const POST = withApiCatch(async (request: Request, { params }: Params) =>
   }
   const isBulk = Array.isArray(raw.value) || !!(raw.value as { employees?: unknown })?.employees;
 
-  const { data: client, error: cErr } = await loadClientAgency(
-    supabase,
-    clientId,
-  );
-  if (cErr || !client) {
-    return jsonError("Klijent nije pronađen.", 404, { code: "NOT_FOUND" });
-  }
-
-  if (
-    !isSuperAdmin(profile) &&
-    profile.agency_id &&
-    client.agency_id !== profile.agency_id
-  ) {
-    return jsonError("Nema pristupa.", 403, { code: "FORBIDDEN" });
-  }
+  const scope = await requireClientInScope(supabase, profile, clientId);
+  if (!scope.ok) return scope.response;
 
   const rows = parsed.data.map((employee) => ({
-    agency_id: client.agency_id,
+    agency_id: scope.client.agency_id,
     client_company_id: clientId,
     first_name: employee.first_name.trim(),
     last_name: employee.last_name.trim(),

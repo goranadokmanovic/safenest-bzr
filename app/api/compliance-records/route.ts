@@ -4,8 +4,8 @@ import {
   canReadAgencyRecords,
   getAuthContext,
   isClientPortalUser,
-  isSuperAdmin,
 } from "@/lib/api/session";
+import { requireClientInScope } from "@/lib/api/client-scope";
 import { isUuid } from "@/lib/api/agency-scope";
 import { jsonError, jsonOk } from "@/lib/api/responses";
 import { readJsonBody } from "@/lib/api/read-json";
@@ -72,22 +72,8 @@ export const GET = withApiCatch(async (request: Request) => {
     });
   }
 
-  const { data: client, error: cErr } = await supabase
-    .from("client_companies")
-    .select("id, agency_id")
-    .eq("id", clientId)
-    .maybeSingle();
-
-  if (cErr || !client) {
-    return jsonError("Klijent nije pronađen.", 404, { code: "NOT_FOUND" });
-  }
-  if (
-    !isSuperAdmin(profile) &&
-    profile.agency_id &&
-    client.agency_id !== profile.agency_id
-  ) {
-    return jsonError("Nema pristupa.", 403, { code: "FORBIDDEN" });
-  }
+  const scope = await requireClientInScope(supabase, profile, clientId);
+  if (!scope.ok) return scope.response;
 
   const { data, error } = await supabase
     .from("compliance_records")
@@ -129,29 +115,19 @@ export const POST = withApiCatch(async (request: Request) => {
     });
   }
 
-  const { data: client, error: cErr } = await supabase
-    .from("client_companies")
-    .select("id, agency_id")
-    .eq("id", body.client_company_id)
-    .maybeSingle();
-
-  if (cErr || !client) {
-    return jsonError("Klijent nije pronađen.", 404, { code: "NOT_FOUND" });
-  }
-  if (
-    !isSuperAdmin(profile) &&
-    profile.agency_id &&
-    client.agency_id !== profile.agency_id
-  ) {
-    return jsonError("Nema pristupa.", 403, { code: "FORBIDDEN" });
-  }
+  const scope = await requireClientInScope(
+    supabase,
+    profile,
+    body.client_company_id,
+  );
+  if (!scope.ok) return scope.response;
 
   const subjectType = RECORD_TYPE_SUBJECT[body.record_type];
 
   const { data, error } = await supabase
     .from("compliance_records")
     .insert({
-      agency_id: client.agency_id,
+      agency_id: scope.client.agency_id,
       client_company_id: body.client_company_id,
       record_type: body.record_type,
       subject_type: subjectType,

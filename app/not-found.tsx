@@ -9,7 +9,7 @@ export default function NotFound() {
       </p>
       <Link
         href="/"
-        className="inline-flex w-fit border border-ink bg-accent px-4 py-2 text-sm font-semibold text-ink"
+        className="inline-flex w-fit bzr-btn-primary"
       >
         Na početnu
       </Link>

@@ -21,7 +21,7 @@ export default function ErrorBoundary({
         se vratiti na početnu.
       </p>
       {process.env.NODE_ENV === "development" && error.message ? (
-        <pre className="overflow-x-auto border border-ink bg-surface p-3 text-xs text-red-800">
+        <pre className="overflow-x-auto rounded-lg border border-border/40 bg-surface p-3 text-xs text-red-800">
           {error.message}
         </pre>
       ) : null}
@@ -29,13 +29,13 @@ export default function ErrorBoundary({
         <button
           type="button"
           onClick={() => reset()}
-          className="border border-ink bg-accent px-4 py-2 text-sm font-semibold text-ink"
+          className="bzr-btn-primary"
         >
           Pokušaj ponovo
         </button>
         <a
           href="/"
-          className="border border-ink bg-surface px-4 py-2 text-sm font-medium text-ink"
+          className="rounded-lg border border-border/40 bg-surface px-4 py-2 text-sm font-medium text-ink"
         >
           Početna
         </a>

@@ -1,5 +1,8 @@
-import Link from "next/link";
 import { assertSuperAdminUser, getAdminDbOrNull } from "@/lib/admin/gate";
+import { getUserLocale } from "@/lib/i18n/server";
+import { getMessages } from "@/lib/i18n";
+import { BackButton } from "@/components/ui/BackButton";
+import { PageCornerDecor } from "@/components/brand/PageCornerDecor";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +18,9 @@ type AuditRow = {
 
 export default async function AdminAuditPage() {
   await assertSuperAdminUser();
+  const locale = await getUserLocale();
+  const m = getMessages(locale);
+  const a = m.admin.audit;
   const db = getAdminDbOrNull();
 
   let rows: AuditRow[] = [];
@@ -35,24 +41,20 @@ export default async function AdminAuditPage() {
   }
 
   return (
-    <main>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <main className="relative isolate min-h-[32rem]">
+      <PageCornerDecor kind="halftone" variant="canvas" />
+      <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Audit log</h1>
-          <p className="mt-1 max-w-2xl text-sm text-ink/70">
-            Poslednjih 150 admin akcija. Tabela{" "}
-            <code className="font-mono text-xs">admin_audit_log</code> mora
-            postojati (migracija u projektu).
-          </p>
+          <BackButton href="/admin" className="mb-3" />
+          <h1 className="text-2xl font-bold text-ink">{a.title}</h1>
+          <p className="mt-1 max-w-2xl text-sm text-ink/70">{a.intro}</p>
         </div>
-        <Link href="/admin" className="text-sm underline">
-          ← Admin početna
-        </Link>
       </div>
 
       {!db ? (
-        <p className="mt-6 text-sm text-amber-800">
-          Nema <code className="font-mono">SUPABASE_SERVICE_ROLE_KEY</code>.
+        <p className="mt-6 text-sm text-warning">
+          {a.noServiceRole}{" "}
+          <code className="font-mono">SUPABASE_SERVICE_ROLE_KEY</code>.
         </p>
       ) : null}
 
@@ -63,32 +65,32 @@ export default async function AdminAuditPage() {
       ) : null}
 
       {db && !loadError ? (
-        <div className="mt-6 overflow-x-auto border border-ink/30">
+        <div className="relative mt-6 overflow-x-auto rounded-xl border border-border/25 shadow-card">
           <table className="w-full min-w-[56rem] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-ink bg-ink/[0.04]">
-                <th className="px-3 py-2 font-semibold">Vreme</th>
-                <th className="px-3 py-2 font-semibold">Akcija</th>
-                <th className="px-3 py-2 font-semibold">Entitet</th>
-                <th className="px-3 py-2 font-semibold">Id</th>
-                <th className="px-3 py-2 font-semibold">Actor</th>
-                <th className="px-3 py-2 font-semibold">Meta</th>
+              <tr className="border-b border-border/25 bg-surface-2">
+                <th className="px-3 py-2 font-semibold">{a.colTime}</th>
+                <th className="px-3 py-2 font-semibold">{a.colAction}</th>
+                <th className="px-3 py-2 font-semibold">{a.colEntity}</th>
+                <th className="px-3 py-2 font-semibold">{a.colId}</th>
+                <th className="px-3 py-2 font-semibold">{a.colActor}</th>
+                <th className="px-3 py-2 font-semibold">{a.colMeta}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="px-3 py-6 text-ink/60">
-                    Nema zapisa. Izvrši SQL migraciju za{" "}
-                    <code className="font-mono text-xs">admin_audit_log</code> pa
-                    ponovo pokreni akcije u adminu.
+                    {a.noRecords}
                   </td>
                 </tr>
               ) : (
                 rows.map((r) => (
                   <tr key={r.id} className="border-b border-ink/15 align-top">
                     <td className="px-3 py-2 whitespace-nowrap text-xs text-ink/80">
-                      {new Date(r.created_at).toLocaleString("sr-Latn-RS")}
+                      {new Date(r.created_at).toLocaleString(
+                        locale === "en" ? "en-GB" : "sr-Latn-RS",
+                      )}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs">{r.action}</td>
                     <td className="px-3 py-2 text-xs">

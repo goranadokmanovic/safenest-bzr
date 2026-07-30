@@ -3,14 +3,14 @@ import { jsonError, jsonOk } from "@/lib/api/responses";
 import { isUuid } from "@/lib/api/agency-scope";
 import { withApiCatch } from "@/lib/api/with-api-catch";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export const PATCH = withApiCatch(async (_request: Request, { params }: Params) => {
   const auth = await getAuthContext();
   if (!auth.ok) return auth.response;
   const { supabase, user } = auth.ctx;
 
-  const { id } = params;
+  const { id } = await params;
   if (!isUuid(id)) {
     return jsonError("Nevažeći id.", 400, { code: "INVALID_ID" });
   }

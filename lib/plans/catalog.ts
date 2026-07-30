@@ -5,6 +5,7 @@ export type AgencyPlanDef = {
   id: AgencyPlanId;
   /** Prikaz ime */
   nameSr: string;
+  nameEn: string;
   /** Kratak opis (agencija + agenti) */
   descriptionSr: string;
   /** Maks. korisnika agencije koji broje za naplatu: vlasnik + agenti (LZS/teren/saradnik). null = neograničeno. */
@@ -21,18 +22,21 @@ export const AGENCY_PLANS: readonly AgencyPlanDef[] = [
   {
     id: "agency_basic",
     nameSr: "Osnovni",
+    nameEn: "Basic",
     descriptionSr: "Agencija + do 2 agenta (ukupno 3 korisnika)",
     maxBillableSeats: 3,
   },
   {
     id: "agency_l",
     nameSr: "L",
+    nameEn: "L",
     descriptionSr: "Agencija + do 8 agenata (ukupno 9 korisnika)",
     maxBillableSeats: 9,
   },
   {
     id: "agency_xl",
     nameSr: "XL",
+    nameEn: "XL",
     descriptionSr: "Agencija + neograničeno korisnika",
     maxBillableSeats: null,
   },

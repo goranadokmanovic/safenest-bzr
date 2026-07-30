@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "@/components/i18n/locale-provider";
 
 export type AgencyOption = { id: string; name: string };
 
@@ -13,13 +14,13 @@ type Props = {
 
 export function ProfileAgencyAssign({ userId, agencyId, agencies }: Props) {
   const router = useRouter();
+  const { m } = useTranslations();
   const [value, setValue] = useState(agencyId ?? "");
   const [ack, setAck] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const changed =
-    (agencyId ?? "") !== (value === "" ? "" : value);
+  const changed = (agencyId ?? "") !== (value === "" ? "" : value);
 
   async function save() {
     setMsg(null);
@@ -38,10 +39,10 @@ export function ProfileAgencyAssign({ userId, agencyId, agencies }: Props) {
         error?: string;
       };
       if (!res.ok) {
-        setMsg(json.error ?? `Greška ${res.status}`);
+        setMsg(json.error ?? `${m.common.error} ${res.status}`);
         return;
       }
-      setMsg("Sačuvano.");
+      setMsg(m.common.saved);
       setAck(false);
       router.refresh();
     } finally {
@@ -54,10 +55,10 @@ export function ProfileAgencyAssign({ userId, agencyId, agencies }: Props) {
       <select
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        className="w-full max-w-[14rem] border border-ink/40 bg-white px-2 py-1 text-xs text-ink"
-        aria-label="Dodela agencije"
+        className="w-full max-w-[14rem] rounded-lg border border-border/40 bg-surface px-2 py-1 text-xs text-ink"
+        aria-label={m.admin.users.assignAgencyLabel}
       >
-        <option value="">— bez agencije —</option>
+        <option value="">{m.admin.users.noAgency}</option>
         {agencies.map((a) => (
           <option key={a.id} value={a.id}>
             {a.name}
@@ -71,20 +72,22 @@ export function ProfileAgencyAssign({ userId, agencyId, agencies }: Props) {
           onChange={(e) => setAck(e.target.checked)}
           className="mt-0.5"
         />
-        <span>Potvrđujem promenu agencije za ovog korisnika.</span>
+        <span>{m.admin.users.confirmAgencyChange}</span>
       </label>
       <button
         type="button"
         disabled={loading || !changed || !ack}
         onClick={save}
-        className="max-w-[14rem] border border-ink bg-surface px-2 py-1 text-xs font-semibold text-ink disabled:opacity-50"
+        className="max-w-[14rem] rounded-lg border border-border/40 bg-surface px-2 py-1 text-xs font-semibold text-ink disabled:opacity-50"
       >
-        {loading ? "…" : "Sačuvaj agenciju"}
+        {loading ? m.common.loading : m.admin.users.saveAgency}
       </button>
       {msg ? (
         <p
           className={
-            msg === "Sačuvano." ? "text-xs text-green-800" : "text-xs text-red-700"
+            msg === m.common.saved
+              ? "text-xs text-green-800"
+              : "text-xs text-red-700"
           }
           role="status"
         >

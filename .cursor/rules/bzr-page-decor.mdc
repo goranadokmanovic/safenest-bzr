@@ -1,0 +1,17 @@
+---
+description: BZR page decorative motifs — full image, never cropped
+alwaysApply: true
+---
+
+# Page decorative details (BZR)
+
+Default for **all** app pages unless the user explicitly says otherwise:
+
+1. **Same motif everywhere** — `PageCornerDecor kind="halftone" variant="canvas"` (full-pane texture like Pametna pretraga).
+2. **One motif only** — do not stack a companion (steps/arrow/megaphone) next to the main asset.
+3. **Full page coverage** — the motif layer spans the whole content pane (viewport next to the sidebar when present).
+4. **No mid-page file edges** — textures use CSS `background-size: cover` + `mix-blend-mode: screen` (dark) so the black PNG plate disappears; soft outer feather.
+5. **Behind UI** — motif stays under text, forms, tables, and buttons (`pointer-events: none`, low z-index). Prefer translucent table shells so the motif continues under grids.
+6. **Subtle + optional float** — keep opacity modest (texture ~0.17 dark / ~0.09 light); slow float is fine.
+
+Renders via `PageCanvasDecor` portal to `document.body`. Use `variant="corner"` only when the user asks for a small tucked accent. Other kinds (`dots-spiral`, `steps-b`, etc.) only when the user requests a different motif.

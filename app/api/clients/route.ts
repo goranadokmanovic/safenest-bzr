@@ -1,12 +1,13 @@
 import {
   getAuthContext,
   canReadAgencyRecords,
-  canMutateAgencyRecords,
   isClientPortalUser,
 } from "@/lib/api/session";
+import { getMutationContext } from "@/lib/api/mutation-guards";
 import { agencyFilterForList, agencyIdForInsert } from "@/lib/api/agency-scope";
 import { jsonError, jsonOk } from "@/lib/api/responses";
-import { clientCreateSchema } from "@/lib/api/schemas";
+import { clientCreateSchema, normalizeOperationAddresses } from "@/lib/api/schemas";
+import { resolveAssignedCollaboratorId } from "@/lib/api/client-assigned-collaborator";
 import { readJsonBody } from "@/lib/api/read-json";
 import { withApiCatch } from "@/lib/api/with-api-catch";
 
@@ -62,18 +63,9 @@ export const GET = withApiCatch(async (request: Request) => {
 });
 
 export const POST = withApiCatch(async (request: Request) => {
-  const auth = await getAuthContext();
-  if (!auth.ok) return auth.response;
-  const { profile, supabase } = auth.ctx;
-
-  if (isClientPortalUser(profile)) {
-    return jsonError("Nedozvoljena ruta za klijentski nalog.", 403, {
-      code: "FORBIDDEN",
-    });
-  }
-  if (!canMutateAgencyRecords(profile)) {
-    return jsonError("Nemate dozvolu za izmenu.", 403, { code: "FORBIDDEN" });
-  }
+  const guard = await getMutationContext();
+  if (!guard.ok) return guard.response;
+  const { profile, supabase } = guard.ctx;
 
   const raw = await readJsonBody(request);
   if (!raw.ok) return raw.response;
@@ -89,13 +81,23 @@ export const POST = withApiCatch(async (request: Request) => {
   const agency = agencyIdForInsert(profile, parsed.data.agency_id);
   if ("error" in agency) return agency.error;
 
-  const row = {
+  const assigned = await resolveAssignedCollaboratorId(
+    supabase,
+    agency.agencyId,
+    parsed.data.assigned_collaborator_id,
+  );
+  if (!assigned.ok) return assigned.response;
+
+  const row: Record<string, unknown> = {
     agency_id: agency.agencyId,
     name: parsed.data.name,
     legal_name: parsed.data.legal_name ?? null,
     tax_id: parsed.data.tax_id ?? null,
     activity_sector: parsed.data.activity_sector ?? null,
     address: parsed.data.address ?? null,
+    operation_addresses: normalizeOperationAddresses(
+      parsed.data.operation_addresses,
+    ),
     contact_email:
       parsed.data.contact_email === "" || parsed.data.contact_email == null
         ? null
@@ -104,6 +106,9 @@ export const POST = withApiCatch(async (request: Request) => {
     semaphore: parsed.data.semaphore ?? "green",
     notes: parsed.data.notes ?? null,
   };
+  if (!assigned.skip) {
+    row.assigned_collaborator_id = assigned.value;
+  }
 
   const { data, error } = await supabase
     .from("client_companies")

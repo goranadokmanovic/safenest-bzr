@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "@/components/i18n/locale-provider";
 
 type Props = {
   open: boolean;
@@ -19,13 +20,16 @@ export function AdminPhraseModal({
   title,
   expectedPhrase,
   description,
-  submitLabel = "Potvrdi",
+  submitLabel,
   danger,
   onConfirm,
 }: Props) {
+  const { m } = useTranslations();
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+
+  const confirmLabel = submitLabel ?? m.common.confirm;
 
   useEffect(() => {
     if (open) {
@@ -44,7 +48,7 @@ export function AdminPhraseModal({
       setInput("");
       onClose();
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Greška");
+      setErr(e instanceof Error ? e.message : m.common.error);
     } finally {
       setBusy(false);
     }
@@ -57,7 +61,7 @@ export function AdminPhraseModal({
       aria-modal="true"
       aria-labelledby="admin-phrase-modal-title"
     >
-      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto border-2 border-ink bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto border-2 border-ink bg-surface p-6 shadow-xl">
         <h2 id="admin-phrase-modal-title" className="text-lg font-bold text-ink">
           {title}
         </h2>
@@ -65,7 +69,7 @@ export function AdminPhraseModal({
           <p className="mt-2 text-sm text-ink/80">{description}</p>
         ) : null}
         <p className="mt-4 text-sm font-medium text-ink">
-          Ukucaj tačno sledeću frazu (kopiranje je dozvoljeno):
+          {m.common.confirmPhraseLabel}
         </p>
         <code className="mt-2 block break-all rounded border border-ink/30 bg-ink/[0.06] p-2 text-xs text-ink">
           {expectedPhrase}
@@ -74,10 +78,10 @@ export function AdminPhraseModal({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          className="mt-4 w-full border border-ink px-3 py-2 text-sm text-ink"
-          placeholder="Potvrdna fraza"
+          className="mt-4 w-full rounded-lg border border-border/40 px-3 py-2 text-sm text-ink"
+          placeholder={m.common.confirmPhrasePlaceholder}
           autoComplete="off"
-          aria-label="Potvrdna fraza"
+          aria-label={m.common.confirmPhraseHint}
         />
         {err ? (
           <p className="mt-2 text-sm text-red-700" role="alert">
@@ -92,18 +96,18 @@ export function AdminPhraseModal({
             className={
               danger
                 ? "border border-red-800 bg-red-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-                : "border border-ink bg-accent px-4 py-2 text-sm font-semibold text-ink disabled:opacity-50"
+                : "bzr-btn-primary"
             }
           >
-            {busy ? "…" : submitLabel}
+            {busy ? m.common.loading : confirmLabel}
           </button>
           <button
             type="button"
             disabled={busy}
             onClick={onClose}
-            className="border border-ink/40 bg-white px-4 py-2 text-sm text-ink disabled:opacity-50"
+            className="rounded-lg border border-border/40 bg-surface px-4 py-2 text-sm text-ink disabled:opacity-50"
           >
-            Otkaži
+            {m.common.cancel}
           </button>
         </div>
       </div>

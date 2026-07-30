@@ -15,7 +15,7 @@ import { insertAdminAudit } from "@/lib/admin/audit";
 import { BILLABLE_AGENCY_ROLES } from "@/lib/plans/seats";
 import { maxSeatsForPlanTier } from "@/lib/plans/catalog";
 
-type Params = { params: { userId: string } };
+type Params = { params: Promise<{ userId: string }> };
 
 export const PATCH = withApiCatch(async (request: Request, { params }: Params) => {
   const auth = await getAuthContext();
@@ -24,7 +24,7 @@ export const PATCH = withApiCatch(async (request: Request, { params }: Params) =
     return jsonError("Samo super admin.", 403, { code: "FORBIDDEN" });
   }
 
-  const { userId } = params;
+  const { userId } = await params;
   if (!isUuid(userId)) {
     return jsonError("Nevažeći user id.", 400, { code: "INVALID_ID" });
   }
@@ -165,7 +165,7 @@ export const DELETE = withApiCatch(async (request: Request, { params }: Params) 
     return jsonError("Samo super admin.", 403, { code: "FORBIDDEN" });
   }
 
-  const { userId } = params;
+  const { userId } = await params;
   if (!isUuid(userId)) {
     return jsonError("Nevažeći user id.", 400, { code: "INVALID_ID" });
   }

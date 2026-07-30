@@ -25,9 +25,9 @@ export type AuthResult =
   | { ok: false; response: NextResponse };
 
 export async function getAuthContext(): Promise<AuthResult> {
-  let supabase: ReturnType<typeof createServerSupabaseClient>;
+  let supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>;
   try {
-    supabase = createServerSupabaseClient();
+    supabase = await createServerSupabaseClient();
   } catch {
     return {
       ok: false,
@@ -104,4 +104,16 @@ export function canManageAgencyBilling(
   profile: Pick<AuthProfile, "role" | "agency_id">,
 ): boolean {
   return profile.role === "agency_owner" && !!profile.agency_id;
+}
+
+/** Terenski modul — vlasnik, saradnik, terenski radnik. */
+export function canMutateFieldRecords(profile: AuthProfile): boolean {
+  if (isSuperAdmin(profile)) return true;
+  if (isClientPortalUser(profile)) return false;
+  return (
+    !!profile.agency_id &&
+    (profile.role === "agency_owner" ||
+      profile.role === "agency_collaborator" ||
+      profile.role === "field_worker")
+  );
 }

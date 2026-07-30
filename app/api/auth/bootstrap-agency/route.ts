@@ -6,9 +6,9 @@ import { readJsonBody } from "@/lib/api/read-json";
 import { withApiCatch } from "@/lib/api/with-api-catch";
 
 export const POST = withApiCatch(async (request: Request) => {
-  let supabase: ReturnType<typeof createServerSupabaseClient>;
+  let supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>;
   try {
-    supabase = createServerSupabaseClient();
+    supabase = await createServerSupabaseClient();
   } catch {
     return jsonError("Server nema podešene Supabase promenljive.", 500, {
       code: "CONFIG_ERROR",
@@ -57,6 +57,15 @@ export const POST = withApiCatch(async (request: Request) => {
     const meta = user.user_metadata as Record<string, unknown> | undefined;
     fullName =
       typeof meta?.full_name === "string" ? meta.full_name.trim() : "";
+  }
+
+  const meta = user.user_metadata as Record<string, unknown> | undefined;
+  if (typeof meta?.invite_code === "string" && meta.invite_code.trim()) {
+    return jsonError(
+      "Nalog je registrovan preko pozivnice. Koristi link pozivnice za pridruživanje agenciji.",
+      400,
+      { code: "INVITE_REGISTRATION" },
+    );
   }
 
   if (!agencyName) {

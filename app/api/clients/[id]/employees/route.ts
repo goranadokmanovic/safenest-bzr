@@ -2,17 +2,17 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getAuthContext,
   canReadAgencyRecords,
-  canMutateAgencyRecords,
   isClientPortalUser,
   isSuperAdmin,
 } from "@/lib/api/session";
+import { getMutationContext } from "@/lib/api/mutation-guards";
 import { jsonError, jsonOk } from "@/lib/api/responses";
-import { employeeCreateSchema } from "@/lib/api/schemas";
+import { employeeBulkCreateSchema } from "@/lib/api/schemas";
 import { isUuid } from "@/lib/api/agency-scope";
 import { readJsonBody } from "@/lib/api/read-json";
 import { withApiCatch } from "@/lib/api/with-api-catch";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 async function loadClientAgency(supabase: SupabaseClient, clientId: string) {
   return supabase
@@ -36,7 +36,7 @@ export const GET = withApiCatch(async (_request: Request, { params }: Params) =>
     return jsonError("Nemate pristup.", 403, { code: "FORBIDDEN" });
   }
 
-  const clientId = params.id;
+  const { id: clientId } = await params;
   if (!isUuid(clientId)) {
     return jsonError("Nevažeći id klijenta.", 400, { code: "INVALID_ID" });
   }
@@ -71,20 +71,11 @@ export const GET = withApiCatch(async (_request: Request, { params }: Params) =>
 });
 
 export const POST = withApiCatch(async (request: Request, { params }: Params) => {
-  const auth = await getAuthContext();
-  if (!auth.ok) return auth.response;
-  const { profile, supabase } = auth.ctx;
+  const guard = await getMutationContext();
+  if (!guard.ok) return guard.response;
+  const { profile, supabase } = guard.ctx;
 
-  if (isClientPortalUser(profile)) {
-    return jsonError("Nedozvoljena ruta za klijentski nalog.", 403, {
-      code: "FORBIDDEN",
-    });
-  }
-  if (!canMutateAgencyRecords(profile)) {
-    return jsonError("Nemate dozvolu za izmenu.", 403, { code: "FORBIDDEN" });
-  }
-
-  const clientId = params.id;
+  const { id: clientId } = await params;
   if (!isUuid(clientId)) {
     return jsonError("Nevažeći id klijenta.", 400, { code: "INVALID_ID" });
   }
@@ -92,13 +83,14 @@ export const POST = withApiCatch(async (request: Request, { params }: Params) =>
   const raw = await readJsonBody(request);
   if (!raw.ok) return raw.response;
 
-  const parsed = employeeCreateSchema.safeParse(raw.value);
+  const parsed = employeeBulkCreateSchema.safeParse(raw.value);
   if (!parsed.success) {
     return jsonError("Validacija nije uspela.", 400, {
       code: "VALIDATION_ERROR",
       details: parsed.error.flatten(),
     });
   }
+  const isBulk = Array.isArray(raw.value) || !!(raw.value as { employees?: unknown })?.employees;
 
   const { data: client, error: cErr } = await loadClientAgency(
     supabase,
@@ -116,26 +108,32 @@ export const POST = withApiCatch(async (request: Request, { params }: Params) =>
     return jsonError("Nema pristupa.", 403, { code: "FORBIDDEN" });
   }
 
-  const row = {
+  const rows = parsed.data.map((employee) => ({
     agency_id: client.agency_id,
     client_company_id: clientId,
-    first_name: parsed.data.first_name,
-    last_name: parsed.data.last_name,
-    position: parsed.data.position ?? null,
-    personal_id_masked: parsed.data.personal_id_masked ?? null,
-    employment_start: parsed.data.employment_start ?? null,
-    active: parsed.data.active ?? true,
-  };
+    first_name: employee.first_name.trim(),
+    last_name: employee.last_name.trim(),
+    position: employee.position?.trim() || null,
+    personal_id_masked: employee.personal_id_masked?.trim() || null,
+    employment_start: employee.employment_start ?? null,
+    active: employee.active ?? true,
+  }));
 
   const { data, error } = await supabase
     .from("employees")
-    .insert(row)
-    .select("*")
-    .single();
+    .insert(rows)
+    .select("*");
 
   if (error) {
     return jsonError(error.message, 400, { code: "DATABASE_ERROR" });
   }
 
-  return jsonOk({ employee: data }, 201);
+  const created = data ?? [];
+
+  return jsonOk(
+    isBulk
+      ? { employees: created, created: created.length }
+      : { employee: created[0] ?? null },
+    201,
+  );
 });

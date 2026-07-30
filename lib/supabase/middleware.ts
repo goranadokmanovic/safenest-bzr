@@ -13,16 +13,20 @@ export async function updateSession(request: NextRequest) {
 
   const supabase = createServerClient(url, key, {
     cookies: {
-      getAll() {
-        return request.cookies.getAll();
+      getAll: () => {
+        const cookies: Array<{ name: string; value: string }> = [];
+        request.cookies.getAll().forEach((cookie) => {
+          cookies.push({ name: cookie.name, value: cookie.value });
+        });
+        return cookies;
       },
-      setAll(
+      setAll: (
         cookiesToSet: {
           name: string;
           value: string;
           options: CookieOptions;
         }[],
-      ) {
+      ) => {
         cookiesToSet.forEach(({ name, value }) =>
           request.cookies.set(name, value),
         );
@@ -50,7 +54,12 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl);
   }
 
-  if (user && (pathname === "/login" || pathname === "/register")) {
+  // Owner /register i /login: ulogovan → dashboard.
+  // /register/worker?code=… mora ostati dostupna i ulogovanima (poruka o odjavi).
+  if (
+    user &&
+    (pathname === "/login" || pathname === "/register")
+  ) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 

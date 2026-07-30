@@ -144,75 +144,82 @@ export function StripeBillingSection({
     AGENCY_PLANS.find((p) => p.id === tierNorm)?.nameSr ?? planTier ?? "—";
 
   return (
-    <section className="mt-10 border-t border-ink/20 pt-8">
-      <h2 className="text-lg font-semibold text-ink">Pretplata agencije (Stripe)</h2>
-      <p className="mt-2 max-w-xl text-sm text-ink/75">
-        Plaća <strong>vlasnik agencije</strong>; saradnici i terenski radnici koriste
-        istu pretplatu dok god agencija ima slobodna mesta po planu.
+    <section className="bzr-card mt-2">
+      <p className="bzr-eyebrow">Billing</p>
+      <h2 className="mt-1 text-lg font-semibold tracking-tight text-ink">
+        Pretplata agencije
+      </h2>
+      <p className="mt-2 max-w-xl text-sm leading-relaxed text-ink/65">
+        Plaća <strong className="text-ink">vlasnik agencije</strong>; saradnici i
+        terenski radnici koriste istu pretplatu dok god agencija ima slobodna
+        mesta po planu.
       </p>
-      <dl className="mt-4 space-y-2 text-sm">
-        <div className="flex gap-2 border-b border-ink/10 py-2">
-          <dt className="w-40 font-medium text-ink">Status</dt>
-          <dd className="text-ink/90">{subscriptionStatus ?? "—"}</dd>
+      <dl className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="rounded-xl border border-border/15 bg-bg/40 px-3.5 py-3">
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink/45">
+            Status
+          </dt>
+          <dd className="mt-1 text-sm font-medium text-ink">
+            {subscriptionStatus ?? "—"}
+          </dd>
         </div>
-        <div className="flex gap-2 border-b border-ink/10 py-2">
-          <dt className="w-40 font-medium text-ink">Plan</dt>
-          <dd className="text-ink/90">{currentPlanLabel}</dd>
+        <div className="rounded-xl border border-border/15 bg-bg/40 px-3.5 py-3">
+          <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink/45">
+            Plan
+          </dt>
+          <dd className="mt-1 text-sm font-medium text-ink">{currentPlanLabel}</dd>
         </div>
         {trialEndsAt ? (
-          <div className="flex gap-2 border-b border-ink/10 py-2">
-            <dt className="w-40 font-medium text-ink">Trial do</dt>
-            <dd className="text-ink/90">
+          <div className="rounded-xl border border-border/15 bg-bg/40 px-3.5 py-3 sm:col-span-2">
+            <dt className="text-[11px] font-semibold uppercase tracking-wider text-ink/45">
+              Trial do
+            </dt>
+            <dd className="mt-1 text-sm font-medium text-ink">
               {new Date(trialEndsAt).toLocaleString("sr-Latn-RS")}
             </dd>
           </div>
         ) : null}
       </dl>
 
-      <div className="mt-6 flex flex-wrap items-center gap-3 border-b border-ink/15 pb-4">
-        <span className="text-sm font-medium text-ink">Period naplate:</span>
-        <button
-          type="button"
-          onClick={() => setInterval("month")}
-          className={`border px-3 py-1.5 text-sm ${
-            interval === "month"
-              ? "border-ink bg-accent font-semibold text-ink"
-              : "border-ink/40 bg-surface text-ink"
-          }`}
-        >
-          Mesečno
-        </button>
-        <button
-          type="button"
-          onClick={() => setInterval("year")}
-          className={`border px-3 py-1.5 text-sm ${
-            interval === "year"
-              ? "border-ink bg-accent font-semibold text-ink"
-              : "border-ink/40 bg-surface text-ink"
-          }`}
-        >
-          Godišnje
-        </button>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <span className="text-sm font-medium text-ink/70">Period naplate</span>
+        <div className="bzr-tabs" role="group" aria-label="Period naplate">
+          <button
+            type="button"
+            onClick={() => setInterval("month")}
+            aria-selected={interval === "month"}
+            className="bzr-tab"
+          >
+            Mesečno
+          </button>
+          <button
+            type="button"
+            onClick={() => setInterval("year")}
+            aria-selected={interval === "year"}
+            className="bzr-tab"
+          >
+            Godišnje
+          </button>
+        </div>
       </div>
 
       {quotesError ? (
-        <p className="mt-4 text-sm text-amber-900" role="status">
+        <p className="mt-4 text-sm text-warning" role="status">
           Cene nisu učitane: {quotesError}
         </p>
       ) : null}
 
       <ul className="mt-6 grid gap-4 sm:grid-cols-3">
         {AGENCY_PLANS.map((p) => (
-          <li
-            key={p.id}
-            className="flex flex-col border border-ink/30 bg-surface p-4"
-          >
-            <h3 className="font-semibold text-ink">{p.nameSr}</h3>
-            <p className="mt-2 flex-1 text-xs text-ink/80">{p.descriptionSr}</p>
-            <p className="mt-3 text-lg font-bold tabular-nums text-ink">
+          <li key={p.id} className="bzr-stat flex flex-col !py-4">
+            <h3 className="font-semibold tracking-tight text-ink">{p.nameSr}</h3>
+            <p className="mt-2 flex-1 text-xs leading-relaxed text-ink/65">
+              {p.descriptionSr}
+            </p>
+            <p className="mt-3 text-xl font-bold tabular-nums text-ink">
               {quotes === null && !quotesError ? "Učitavanje…" : priceLabel(p.id)}
             </p>
-            <p className="mt-1 text-[11px] text-ink/55">
+            <p className="mt-1 text-[11px] text-ink/45">
               Iznos iz Stripe cene (Price ID iz .env).
             </p>
             <button
@@ -221,7 +228,7 @@ export function StripeBillingSection({
                 loading !== null || (quotes === null && quotesError == null)
               }
               onClick={() => checkout(p.id)}
-              className="mt-4 border border-ink bg-accent px-3 py-2 text-xs font-semibold text-ink disabled:opacity-60"
+              className="bzr-btn-primary bzr-btn-sm mt-4 w-full"
             >
               {loading === p.id ? "Otvaranje…" : "Izaberi i plati"}
             </button>
@@ -230,22 +237,22 @@ export function StripeBillingSection({
       </ul>
 
       {error ? (
-        <p className="mt-4 text-sm text-red-700" role="alert">
+        <p className="mt-4 text-sm text-danger" role="alert">
           {error}
         </p>
       ) : null}
 
       {hasStripeCustomer ? (
-        <div className="mt-6">
+        <div className="mt-6 border-t border-border/15 pt-5">
           <button
             type="button"
             disabled={loading !== null}
             onClick={onPortal}
-            className="border border-ink bg-surface px-4 py-2 text-sm font-semibold text-ink disabled:opacity-60"
+            className="bzr-btn-secondary"
           >
             {loading === "portal" ? "Otvaranje…" : "Stripe korisnički portal"}
           </button>
-          <p className="mt-2 text-xs text-ink/60">
+          <p className="mt-2 text-xs text-ink/55">
             U portalu možeš promeniti način plaćanja ili (ako je uključeno u Stripe)
             zameniti plan.
           </p>

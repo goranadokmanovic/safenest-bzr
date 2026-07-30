@@ -1,4 +1,4 @@
-export const APP_NAME = "SafeNest BZR";
+export const APP_NAME = "Bez Zrna Rizika";
 
 export const DEFAULT_LOCALE = "sr" as const;
 

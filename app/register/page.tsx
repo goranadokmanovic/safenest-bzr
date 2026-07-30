@@ -4,6 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import Image from "next/image";
+import { BackButton } from "@/components/ui/BackButton";
+import { PageCornerDecor } from "@/components/brand/PageCornerDecor";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -53,108 +56,120 @@ export default function RegisterPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center px-6">
-      <h1 className="text-2xl font-bold text-ink">Registracija</h1>
-      <p className="mt-2 text-sm text-ink/70">
-        Već imaš nalog?{" "}
-        <Link href="/login" className="underline">
-          Prijava
-        </Link>
-      </p>
+    <main className="bzr-auth-shell">
+      <PageCornerDecor kind="halftone" variant="canvas" />
 
-      <form onSubmit={onSubmit} className="mt-8 space-y-4">
-        <div>
-          <label
-            htmlFor="agency"
-            className="block text-sm font-medium text-ink"
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-md flex-col justify-center px-6 py-16">
+        <BackButton href="/" className="mb-6" />
+        <Image
+          src="/brand/logo-web.png"
+          alt=""
+          width={64}
+          height={64}
+          className="mb-4 h-14 w-14 object-contain"
+          aria-hidden
+        />
+        <h1 className="font-display text-4xl font-light tracking-tight text-ink sm:text-5xl">
+          Registracija
+        </h1>
+        <p className="mt-3 text-base text-ink/70">
+          Već imaš nalog?{" "}
+          <Link
+            href="/login"
+            className="font-medium text-accent underline-offset-2 hover:underline"
           >
-            Ime agencije
-          </label>
-          <input
-            id="agency"
-            name="agency"
-            type="text"
-            required
-            value={agencyName}
-            onChange={(e) => setAgencyName(e.target.value)}
-            className="mt-1 w-full border border-ink px-3 py-2 text-ink outline-none focus:ring-1 focus:ring-ink"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="fullName"
-            className="block text-sm font-medium text-ink"
-          >
-            Ime i prezime
-          </label>
-          <input
-            id="fullName"
-            name="fullName"
-            type="text"
-            required
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            className="mt-1 w-full border border-ink px-3 py-2 text-ink outline-none focus:ring-1 focus:ring-ink"
-          />
-        </div>
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-ink">
-            Email
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 w-full border border-ink px-3 py-2 text-ink outline-none focus:ring-1 focus:ring-ink"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="password"
-            className="block text-sm font-medium text-ink"
-          >
-            Lozinka
-          </label>
-          <input
-            id="password"
-            name="password"
-            type="password"
-            autoComplete="new-password"
-            required
-            minLength={6}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full border border-ink px-3 py-2 text-ink outline-none focus:ring-1 focus:ring-ink"
-          />
-        </div>
-        {error ? (
-          <p className="text-sm text-red-700" role="alert">
-            {error}
-          </p>
-        ) : null}
-        {info ? (
-          <p className="text-sm text-ink/80" role="status">
-            {info}
-          </p>
-        ) : null}
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full border border-ink bg-accent px-4 py-2 text-sm font-semibold text-ink disabled:opacity-60"
-        >
-          {loading ? "Slanje…" : "Registruj se"}
-        </button>
-      </form>
+            Prijava
+          </Link>
+        </p>
 
-      <p className="mt-8 text-center text-sm">
-        <Link href="/" className="underline">
-          Nazad na početnu
-        </Link>
-      </p>
+        <form onSubmit={onSubmit} className="bzr-card mt-8 space-y-4">
+          <div>
+            <label
+              htmlFor="agency"
+              className="block text-sm font-medium text-ink"
+            >
+              Ime agencije
+            </label>
+            <input
+              id="agency"
+              name="agency"
+              type="text"
+              required
+              value={agencyName}
+              onChange={(e) => setAgencyName(e.target.value)}
+              className="bzr-input mt-1"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="fullName"
+              className="block text-sm font-medium text-ink"
+            >
+              Ime i prezime
+            </label>
+            <input
+              id="fullName"
+              name="fullName"
+              type="text"
+              required
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="bzr-input mt-1"
+            />
+          </div>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-ink">
+              Email
+            </label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="bzr-input mt-1"
+            />
+          </div>
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-ink"
+            >
+              Lozinka
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autoComplete="new-password"
+              required
+              minLength={6}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bzr-input mt-1"
+            />
+          </div>
+          {error ? (
+            <p className="text-sm text-danger" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {info ? (
+            <p className="text-sm text-ink/80" role="status">
+              {info}
+            </p>
+          ) : null}
+          <button
+            type="submit"
+            disabled={loading}
+            className="bzr-btn-primary w-full"
+          >
+            {loading ? "Slanje…" : "Registruj se"}
+          </button>
+        </form>
+      </div>
     </main>
   );
 }

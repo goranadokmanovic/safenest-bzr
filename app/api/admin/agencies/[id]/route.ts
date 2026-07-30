@@ -14,7 +14,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { insertAdminAudit } from "@/lib/admin/audit";
 import { deleteAgencyCascade } from "@/lib/admin/delete-agency-cascade";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export const PATCH = withApiCatch(async (request: Request, { params }: Params) => {
   const auth = await getAuthContext();
@@ -23,7 +23,7 @@ export const PATCH = withApiCatch(async (request: Request, { params }: Params) =
     return jsonError("Samo super admin.", 403, { code: "FORBIDDEN" });
   }
 
-  const { id } = params;
+  const { id } = await params;
   if (!isUuid(id)) {
     return jsonError("Nevažeći id.", 400, { code: "INVALID_ID" });
   }
@@ -101,7 +101,7 @@ export const DELETE = withApiCatch(async (request: Request, { params }: Params) 
     return jsonError("Samo super admin.", 403, { code: "FORBIDDEN" });
   }
 
-  const { id } = params;
+  const { id } = await params;
   if (!isUuid(id)) {
     return jsonError("Nevažeći id.", 400, { code: "INVALID_ID" });
   }

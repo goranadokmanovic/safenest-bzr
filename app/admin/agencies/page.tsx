@@ -1,7 +1,10 @@
-import Link from "next/link";
 import { assertSuperAdminUser, getAdminDbOrNull } from "@/lib/admin/gate";
+import { getUserLocale } from "@/lib/i18n/server";
+import { getMessages } from "@/lib/i18n";
 import { AgencySubscriptionEdit } from "@/components/admin/agency-subscription-edit";
 import { AgencyDeleteButton } from "@/components/admin/agency-delete-button";
+import { BackButton } from "@/components/ui/BackButton";
+import { PageCornerDecor } from "@/components/brand/PageCornerDecor";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +21,9 @@ type AgencyRow = {
 
 export default async function AdminAgenciesPage() {
   await assertSuperAdminUser();
+  const locale = await getUserLocale();
+  const m = getMessages(locale);
+  const ag = m.admin.agencies;
   const db = getAdminDbOrNull();
 
   let agencies: AgencyRow[] = [];
@@ -40,25 +46,18 @@ export default async function AdminAgenciesPage() {
   }
 
   return (
-    <main>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <main className="relative isolate min-h-[32rem]">
+      <PageCornerDecor kind="halftone" variant="canvas" />
+      <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Agencije</h1>
-          <p className="mt-1 text-sm text-ink/70">
-            Pregled i izmena pretplate (max 200). Zahteva{" "}
-            <code className="font-mono text-xs">SUPABASE_SERVICE_ROLE_KEY</code>.
-          </p>
+          <BackButton href="/admin" className="mb-3" />
+          <h1 className="text-2xl font-bold text-ink">{ag.title}</h1>
+          <p className="mt-1 text-sm text-ink/70">{ag.intro}</p>
         </div>
-        <Link href="/admin" className="text-sm underline">
-          ← Admin početna
-        </Link>
       </div>
 
       {!db ? (
-        <p className="mt-6 text-sm text-amber-800">
-          Nema <code className="font-mono">SUPABASE_SERVICE_ROLE_KEY</code> —
-          lista se ne može učitati.
-        </p>
+        <p className="mt-6 text-sm text-warning">{ag.noServiceRole}</p>
       ) : null}
 
       {loadError ? (
@@ -68,21 +67,21 @@ export default async function AdminAgenciesPage() {
       ) : null}
 
       {db && !loadError ? (
-        <div className="mt-6 overflow-x-auto border border-ink/30">
+        <div className="relative mt-6 overflow-x-auto rounded-xl border border-border/25 shadow-card">
           <table className="w-full min-w-[72rem] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-ink bg-ink/[0.04]">
-                <th className="px-3 py-2 font-semibold">Naziv</th>
-                <th className="px-3 py-2 font-semibold">Slug</th>
-                <th className="px-3 py-2 font-semibold">Stripe</th>
-                <th className="px-3 py-2 font-semibold">Izmena pretplate</th>
+              <tr className="border-b border-border/25 bg-surface-2">
+                <th className="px-3 py-2 font-semibold">{ag.colName}</th>
+                <th className="px-3 py-2 font-semibold">{ag.colSlug}</th>
+                <th className="px-3 py-2 font-semibold">{ag.colStripe}</th>
+                <th className="px-3 py-2 font-semibold">{ag.colSubscriptionEdit}</th>
               </tr>
             </thead>
             <tbody>
               {agencies.length === 0 ? (
                 <tr>
                   <td colSpan={4} className="px-3 py-6 text-ink/60">
-                    Nema agencija.
+                    {ag.noAgencies}
                   </td>
                 </tr>
               ) : (

@@ -40,6 +40,7 @@ export function AgencyBootstrap({
         let fullName =
           typeof fullNameHint === "string" ? fullNameHint.trim() : "";
 
+        let inviteCode = "";
         if (!agencyName || !fullName) {
           try {
             const supabase = createBrowserSupabaseClient();
@@ -61,9 +62,36 @@ export function AgencyBootstrap({
                   ? meta.full_name.trim()
                   : "";
             }
+            if (typeof meta?.invite_code === "string") {
+              inviteCode = meta.invite_code.trim();
+            }
           } catch {
             /* env / klijent */
           }
+        }
+
+        // Registracija preko pozivnice — ne kreiraj novu agenciju.
+        if (inviteCode) {
+          const acceptRes = await fetch("/api/agency/invite/accept", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ code: inviteCode }),
+            signal: ac.signal,
+          });
+          const acceptJson = (await acceptRes.json().catch(() => ({}))) as {
+            error?: string;
+          };
+          if (ac.signal.aborted) return;
+          if (!acceptRes.ok) {
+            setState("error");
+            setMessage(
+              acceptJson.error ?? "Greška pri pridruživanju agenciji.",
+            );
+            return;
+          }
+          setState("done");
+          router.refresh();
+          return;
         }
 
         const payload = JSON.stringify({

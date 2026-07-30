@@ -1,9 +1,12 @@
-import Link from "next/link";
 import { assertSuperAdminUser, getAdminDbOrNull } from "@/lib/admin/gate";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getUserLocale } from "@/lib/i18n/server";
+import { getMessages } from "@/lib/i18n";
 import { ProfileRoleEdit } from "@/components/admin/profile-role-edit";
 import { ProfileAgencyAssign } from "@/components/admin/profile-agency-assign";
 import { UserDeleteButton } from "@/components/admin/user-delete-button";
+import { BackButton } from "@/components/ui/BackButton";
+import { PageCornerDecor } from "@/components/brand/PageCornerDecor";
 
 export const dynamic = "force-dynamic";
 
@@ -19,9 +22,12 @@ type ProfileRow = {
 
 export default async function AdminUsersPage() {
   await assertSuperAdminUser();
+  const locale = await getUserLocale();
+  const m = getMessages(locale);
+  const u = m.admin.users;
   const db = getAdminDbOrNull();
 
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -79,25 +85,18 @@ export default async function AdminUsersPage() {
   }
 
   return (
-    <main>
-      <div className="flex flex-wrap items-end justify-between gap-4">
+    <main className="relative isolate min-h-[32rem]">
+      <PageCornerDecor kind="halftone" variant="canvas" />
+      <div className="relative flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-ink">Korisnici</h1>
-          <p className="mt-1 text-sm text-ink/70">
-            Uloga, dodela agencije i brisanje naloga. Sve izmene zahtevaju
-            potvrdu čekboksom; brisanje i fraza u modalu.
-          </p>
+          <BackButton href="/admin" className="mb-3" />
+          <h1 className="text-2xl font-bold text-ink">{u.title}</h1>
+          <p className="mt-1 text-sm text-ink/70">{u.intro}</p>
         </div>
-        <Link href="/admin" className="text-sm underline">
-          ← Admin početna
-        </Link>
       </div>
 
       {!db ? (
-        <p className="mt-6 text-sm text-amber-800">
-          Nema <code className="font-mono">SUPABASE_SERVICE_ROLE_KEY</code> —
-          lista se ne može učitati.
-        </p>
+        <p className="mt-6 text-sm text-warning">{u.noServiceRole}</p>
       ) : null}
 
       {loadError ? (
@@ -107,31 +106,33 @@ export default async function AdminUsersPage() {
       ) : null}
 
       {db && !loadError ? (
-        <div className="mt-6 overflow-x-auto border border-ink/30">
+        <div className="relative mt-6 overflow-x-auto rounded-xl border border-border/25 shadow-card">
           <table className="w-full min-w-[64rem] border-collapse text-left text-sm">
             <thead>
-              <tr className="border-b border-ink bg-ink/[0.04]">
-                <th className="px-3 py-2 font-semibold">Email</th>
-                <th className="px-3 py-2 font-semibold">Ime</th>
-                <th className="px-3 py-2 font-semibold">Uloga / agencija</th>
-                <th className="px-3 py-2 font-semibold">Agencija (naziv)</th>
-                <th className="px-3 py-2 font-semibold">Jezik</th>
-                <th className="px-3 py-2 font-semibold">user_id</th>
-                <th className="px-3 py-2 font-semibold">Akcije</th>
+              <tr className="border-b border-border/25 bg-surface-2">
+                <th className="px-3 py-2 font-semibold">{u.colEmail}</th>
+                <th className="px-3 py-2 font-semibold">{u.colName}</th>
+                <th className="px-3 py-2 font-semibold">{u.colRoleAgency}</th>
+                <th className="px-3 py-2 font-semibold">{u.colAgencyName}</th>
+                <th className="px-3 py-2 font-semibold">{u.colLocale}</th>
+                <th className="px-3 py-2 font-semibold">{u.colUserId}</th>
+                <th className="px-3 py-2 font-semibold">{m.common.actions}</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="px-3 py-6 text-ink/60">
-                    Nema profila.
+                    {u.noProfiles}
                   </td>
                 </tr>
               ) : (
                 rows.map((r) => (
                   <tr key={r.user_id} className="border-b border-ink/15">
                     <td className="px-3 py-2 align-top">{r.email}</td>
-                    <td className="px-3 py-2 align-top">{r.full_name ?? "—"}</td>
+                    <td className="px-3 py-2 align-top">
+                      {r.full_name ?? m.common.noData}
+                    </td>
                     <td className="px-3 py-2 align-top">
                       <ProfileRoleEdit
                         userId={r.user_id}
@@ -147,10 +148,11 @@ export default async function AdminUsersPage() {
                     </td>
                     <td className="px-3 py-2 align-top text-ink/90">
                       {r.agency_id
-                        ? (agencyNames.get(r.agency_id) ?? `${r.agency_id.slice(0, 8)}…`)
-                        : "—"}
+                        ? (agencyNames.get(r.agency_id) ??
+                          `${r.agency_id.slice(0, 8)}…`)
+                        : m.common.noData}
                     </td>
-                    <td className="px-3 py-2 align-top">{r.locale ?? "—"}</td>
+                    <td className="px-3 py-2 align-top">{r.locale ?? m.common.noData}</td>
                     <td className="px-3 py-2 align-top font-mono text-[11px] text-ink/60">
                       {r.user_id.slice(0, 8)}…
                     </td>

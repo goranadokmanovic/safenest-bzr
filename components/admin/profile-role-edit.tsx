@@ -2,24 +2,22 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-
-const ROLES = [
-  "super_admin",
-  "agency_owner",
-  "agency_collaborator",
-  "field_worker",
-  "client_user",
-] as const;
+import { useTranslations } from "@/components/i18n/locale-provider";
+import { ROLE_KEYS } from "@/lib/i18n/types";
 
 type Props = {
   userId: string;
   role: string;
-  /** Trenutno ulogovan super_admin — ne može sebi skinuti super_admin u UI */
   currentUserId: string;
 };
 
-export function ProfileRoleEdit({ userId, role: initialRole, currentUserId }: Props) {
+export function ProfileRoleEdit({
+  userId,
+  role: initialRole,
+  currentUserId,
+}: Props) {
   const router = useRouter();
+  const { m, roleLabel } = useTranslations();
   const [role, setRole] = useState(initialRole);
   const [msg, setMsg] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -40,10 +38,10 @@ export function ProfileRoleEdit({ userId, role: initialRole, currentUserId }: Pr
         error?: string;
       };
       if (!res.ok) {
-        setMsg(json.error ?? `Greška ${res.status}`);
+        setMsg(json.error ?? `${m.common.error} ${res.status}`);
         return;
       }
-      setMsg("Sačuvano.");
+      setMsg(m.common.saved);
       setAck(false);
       router.refresh();
     } finally {
@@ -57,20 +55,18 @@ export function ProfileRoleEdit({ userId, role: initialRole, currentUserId }: Pr
         value={role}
         onChange={(e) => setRole(e.target.value)}
         disabled={isSelf}
-        className="max-w-[11rem] border border-ink/40 bg-white px-2 py-1 text-xs text-ink disabled:cursor-not-allowed disabled:opacity-60"
-        aria-label="Uloga"
-        title={
-          isSelf
-            ? "Sopstvenu ulogu menjaš u Supabase SQL — ovde je zaključano."
-            : undefined
-        }
+        className="max-w-[14rem] rounded-lg border border-border/40 bg-surface px-2 py-1 text-xs text-ink disabled:cursor-not-allowed disabled:opacity-60"
+        aria-label={m.admin.users.roleLabel}
+        title={isSelf ? m.admin.users.roleSelfLocked : undefined}
       >
-        {!(ROLES as readonly string[]).includes(initialRole) ? (
-          <option value={initialRole}>{initialRole} (u bazi)</option>
+        {!(ROLE_KEYS as readonly string[]).includes(initialRole) ? (
+          <option value={initialRole}>
+            {roleLabel(initialRole)}
+          </option>
         ) : null}
-        {ROLES.map((r) => (
+        {ROLE_KEYS.map((r) => (
           <option key={r} value={r}>
-            {r}
+            {roleLabel(r)}
           </option>
         ))}
       </select>
@@ -83,24 +79,28 @@ export function ProfileRoleEdit({ userId, role: initialRole, currentUserId }: Pr
               onChange={(e) => setAck(e.target.checked)}
               className="mt-0.5"
             />
-            <span>Potvrđujem promenu uloge.</span>
+            <span>{m.admin.users.confirmRoleChange}</span>
           </label>
           <button
             type="button"
             disabled={loading || role === initialRole || !ack}
             onClick={save}
-            className="mt-1 max-w-[11rem] border border-ink bg-accent px-2 py-1 text-xs font-semibold text-ink disabled:opacity-50"
+            className="mt-1 max-w-[14rem] bzr-btn-primary bzr-btn-sm !px-2 !py-1"
           >
-            {loading ? "…" : "Primeni ulogu"}
+            {loading ? m.common.loading : m.admin.users.applyRole}
           </button>
         </>
       ) : (
-        <span className="text-[11px] text-ink/50">tvoj nalog</span>
+        <span className="text-[11px] text-ink/50">
+          {m.admin.users.yourAccount}
+        </span>
       )}
       {msg ? (
         <p
           className={
-            msg === "Sačuvano." ? "text-xs text-green-800" : "text-xs text-red-700"
+            msg === m.common.saved
+              ? "text-xs text-green-800"
+              : "text-xs text-red-700"
           }
           role="status"
         >

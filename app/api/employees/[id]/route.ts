@@ -1,17 +1,17 @@
 import {
   getAuthContext,
   canReadAgencyRecords,
-  canMutateAgencyRecords,
   isClientPortalUser,
   isSuperAdmin,
 } from "@/lib/api/session";
+import { getMutationContext } from "@/lib/api/mutation-guards";
 import { jsonError, jsonOk } from "@/lib/api/responses";
 import { employeePatchSchema } from "@/lib/api/schemas";
 import { isUuid } from "@/lib/api/agency-scope";
 import { readJsonBody } from "@/lib/api/read-json";
 import { withApiCatch } from "@/lib/api/with-api-catch";
 
-type Params = { params: { id: string } };
+type Params = { params: Promise<{ id: string }> };
 
 export const GET = withApiCatch(async (_request: Request, { params }: Params) => {
   const auth = await getAuthContext();
@@ -27,7 +27,7 @@ export const GET = withApiCatch(async (_request: Request, { params }: Params) =>
     return jsonError("Nemate pristup.", 403, { code: "FORBIDDEN" });
   }
 
-  const { id } = params;
+  const { id } = await params;
   if (!isUuid(id)) {
     return jsonError("Nevažeći id.", 400, { code: "INVALID_ID" });
   }
@@ -57,20 +57,11 @@ export const GET = withApiCatch(async (_request: Request, { params }: Params) =>
 });
 
 export const PATCH = withApiCatch(async (request: Request, { params }: Params) => {
-  const auth = await getAuthContext();
-  if (!auth.ok) return auth.response;
-  const { profile, supabase } = auth.ctx;
+  const guard = await getMutationContext();
+  if (!guard.ok) return guard.response;
+  const { profile, supabase } = guard.ctx;
 
-  if (isClientPortalUser(profile)) {
-    return jsonError("Nedozvoljena ruta za klijentski nalog.", 403, {
-      code: "FORBIDDEN",
-    });
-  }
-  if (!canMutateAgencyRecords(profile)) {
-    return jsonError("Nemate dozvolu za izmenu.", 403, { code: "FORBIDDEN" });
-  }
-
-  const { id } = params;
+  const { id } = await params;
   if (!isUuid(id)) {
     return jsonError("Nevažeći id.", 400, { code: "INVALID_ID" });
   }
@@ -125,20 +116,11 @@ export const PATCH = withApiCatch(async (request: Request, { params }: Params) =
 });
 
 export const DELETE = withApiCatch(async (_request: Request, { params }: Params) => {
-  const auth = await getAuthContext();
-  if (!auth.ok) return auth.response;
-  const { profile, supabase } = auth.ctx;
+  const guard = await getMutationContext();
+  if (!guard.ok) return guard.response;
+  const { profile, supabase } = guard.ctx;
 
-  if (isClientPortalUser(profile)) {
-    return jsonError("Nedozvoljena ruta za klijentski nalog.", 403, {
-      code: "FORBIDDEN",
-    });
-  }
-  if (!canMutateAgencyRecords(profile)) {
-    return jsonError("Nemate dozvolu za brisanje.", 403, { code: "FORBIDDEN" });
-  }
-
-  const { id } = params;
+  const { id } = await params;
   if (!isUuid(id)) {
     return jsonError("Nevažeći id.", 400, { code: "INVALID_ID" });
   }

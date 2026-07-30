@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useTranslations } from "@/components/i18n/locale-provider";
 import { AGENCY_PLANS } from "@/lib/plans/catalog";
 
 const SUBSCRIPTION_STATUSES = [
@@ -46,6 +47,8 @@ export function AgencySubscriptionEdit({
   trialEndsAt,
 }: AgencyEditProps) {
   const router = useRouter();
+  const { locale, m } = useTranslations();
+  const ag = m.admin.agencies;
   const [sub, setSub] = useState<string>(
     isSubscriptionStatus(subscriptionStatus) ? subscriptionStatus : "trialing",
   );
@@ -67,7 +70,7 @@ export function AgencySubscriptionEdit({
       if (trialLocal.trim()) {
         const d = new Date(trialLocal);
         if (Number.isNaN(d.getTime())) {
-          setMsg("Neispravan datum/trial.");
+          setMsg(ag.invalidTrialDate);
           setLoading(false);
           return;
         }
@@ -88,10 +91,10 @@ export function AgencySubscriptionEdit({
         error?: string;
       };
       if (!res.ok) {
-        setMsg(json.error ?? `Greška ${res.status}`);
+        setMsg(json.error ?? `${m.common.error} ${res.status}`);
         return;
       }
-      setMsg("Sačuvano.");
+      setMsg(m.common.saved);
       setAck(false);
       router.refresh();
     } finally {
@@ -104,8 +107,8 @@ export function AgencySubscriptionEdit({
       <select
         value={sub}
         onChange={(e) => setSub(e.target.value)}
-        className="w-full border border-ink/40 bg-white px-2 py-1 text-xs text-ink"
-        aria-label="Status pretplate"
+        className="w-full rounded-lg border border-border/40 bg-surface px-2 py-1 text-xs text-ink"
+        aria-label={ag.subscriptionStatusLabel}
       >
         {SUBSCRIPTION_STATUSES.map((s) => (
           <option key={s} value={s}>
@@ -118,15 +121,17 @@ export function AgencySubscriptionEdit({
           AGENCY_PLANS.some((p) => p.id === plan) ? plan : "agency_basic"
         }
         onChange={(e) => setPlan(e.target.value)}
-        className="w-full border border-ink/40 bg-white px-2 py-1 text-xs font-mono text-ink"
-        aria-label="Plan"
+        className="w-full rounded-lg border border-border/40 bg-surface px-2 py-1 text-xs font-mono text-ink"
+        aria-label={ag.planLabel}
       >
         {!AGENCY_PLANS.some((p) => p.id === plan) ? (
-          <option value={plan}>{plan} (u bazi)</option>
+          <option value={plan}>
+            {ag.planInDb.replace("{plan}", plan)}
+          </option>
         ) : null}
         {AGENCY_PLANS.map((p) => (
           <option key={p.id} value={p.id}>
-            {p.id} — {p.nameSr}
+            {p.id} — {locale === "en" ? p.nameEn : p.nameSr}
           </option>
         ))}
       </select>
@@ -134,8 +139,8 @@ export function AgencySubscriptionEdit({
         type="datetime-local"
         value={trialLocal}
         onChange={(e) => setTrialLocal(e.target.value)}
-        className="w-full border border-ink/40 px-2 py-1 text-xs"
-        aria-label="Trial do"
+        className="w-full rounded-lg border border-border/40 px-2 py-1 text-xs"
+        aria-label={ag.trialEndsLabel}
       />
       <label className="flex cursor-pointer items-start gap-2 text-[11px] text-ink/80">
         <input
@@ -144,20 +149,20 @@ export function AgencySubscriptionEdit({
           onChange={(e) => setAck(e.target.checked)}
           className="mt-0.5"
         />
-        <span>Potvrđujem izmenu pretplate za ovu agenciju.</span>
+        <span>{ag.confirmSubscriptionChange}</span>
       </label>
       <button
         type="button"
         disabled={loading || !ack}
         onClick={save}
-        className="border border-ink bg-accent px-2 py-1 text-xs font-semibold text-ink disabled:opacity-50"
+        className="bzr-btn-primary bzr-btn-sm !px-2 !py-1"
       >
-        {loading ? "…" : "Sačuvaj"}
+        {loading ? m.common.loading : m.common.save}
       </button>
       {msg ? (
         <p
           className={
-            msg === "Sačuvano." ? "text-xs text-green-800" : "text-xs text-red-700"
+            msg === m.common.saved ? "text-xs text-green-800" : "text-xs text-red-700"
           }
           role="status"
         >

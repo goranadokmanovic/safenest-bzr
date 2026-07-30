@@ -25,7 +25,6 @@ function clientKey(request: NextRequest): string {
   const ip =
     forwarded?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
-    request.ip ||
     "unknown";
   return ip;
 }

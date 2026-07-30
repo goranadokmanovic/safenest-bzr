@@ -1,3 +1,21 @@
 {
-  "extends": "next/core-web-vitals"
+  "extends": "next/core-web-vitals",
+  "overrides": [
+    {
+      "files": ["lib/agent/**/*.ts", "lib/agent/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@/lib/supabase/admin",
+                "message": "Alati asistenta moraju da koriste Supabase klijent ulogovanog korisnika (RLS). Service role je zabranjen u lib/agent."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
 }

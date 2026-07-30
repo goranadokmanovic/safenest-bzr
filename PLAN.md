@@ -1105,6 +1105,89 @@ Nova poseta (+ report_template_id) + glasovna beleška (+ slike)
 | Migracija | `20260728120000_compliance_records.sql` |
 | i18n / CSS | Tab labele, status sažeci, fit tabele (`.bzr-employees-table`), bedževi |
 
-*Poslednje ažuriranje: 2026-07-30 (klijenti detalj / radnici / rokovi / JMBG / uvoz).*
+### Žurnal (2026-07-30) — compliance notifikacije (cron)
+
+- **Vercel Cron** `0 5 * * *` UTC → `GET/POST /api/cron/compliance-deadlines` (`CRON_SECRET`).
+- Pragovi: 30/15/7/3/1 dana + `days <= 0` (`compliance_expired`); dedupe `compliance-{id}-{threshold}`.
+- Primaoci: svi `agency_owner` + `assigned_collaborator_id` klijenta.
+- UI: `NotificationsBell` u topbaru (postojeći `/api/notifications`).
+
+**Sledeći koraci (1–3):**
+1. Postavi `CRON_SECRET` u Vercel env (+ lokalno za smoke test).
+2. Ručni smoke: `GET /api/cron/compliance-deadlines?secret=…` sa service role.
+3. Provera zvona: unread badge + klik na compliance notif → tab Rokovi.
+
+
+
+## Changelog 2026-07-30 — compliance deadline notifikacije
+
+| Stavka | Detalj |
+|--------|--------|
+| Cron | `vercel.json` + `/api/cron/compliance-deadlines` |
+| Logika | `lib/compliance/notify-deadlines.ts` |
+| Env | `CRON_SECRET` u `.env.example` |
+| UI | `components/layout/NotificationsBell.tsx` u `AppShell` |
+
+
+
+## Changelog 2026-07-30 — assigned_collaborator_id kao RLS opseg
+
+Priprema za AI asistenta (Faza A/B tool-ovi): opseg saradnika mora biti stvarna
+granica u bazi, a ne samo filter u UI-ju. Do sada je `agency_collaborator` preko
+RLS video **sve** klijente agencije.
+
+| Stavka | Detalj |
+|--------|--------|
+| Migracija | `20260730210000_client_collaborator_scope.sql` — **mora se primeniti u Supabase SQL Editoru** |
+| DB helperi | `is_scoped_collaborator()`, `works_on_client_company(uuid)`, `client_company_in_scope(uuid, uuid, uuid)`, `client_company_in_scope_by_id(uuid)` |
+| Tabele pod novim opsegom | `client_companies`, `employees`, `compliance_records`, `documents`, `deadlines` (SELECT/INSERT/UPDATE/DELETE) |
+| App sloj | `lib/api/client-scope.ts` — `clientIdsInScope`, `applyClientScope`, `checkClientInScope`, `evaluateClientScope`, `requireClientInScope` |
+| Rute | `/api/clients` (GET+POST), `/api/clients/[id]`, `/api/clients/[id]/employees`, `/api/compliance-records`, `/api/field-visits` (POST) |
+| Stranice | `/agencija/klijenti`, `/agencija/klijenti/[id]`, `/agencija/field-visits`, `/dashboard` (brojač klijenata) |
+
+**Pravila opsega:** `super_admin` sve; `agency_owner` i `field_worker` cela
+agencija (bez promene); `agency_collaborator` samo klijenti gde je
+`assigned_collaborator_id = on` **plus** klijenti na čijoj poseti učestvuje
+(`assigned_user_id` ili `field_visit_collaborators`). Izuzetak za učešće postoji
+da saradnik ne izgubi naziv klijenta na već dodeljenim posetama.
+
+**Posledične promene ponašanja:**
+- Saradnik može da kreira klijenta samo zaduženog za sebe (API + RLS WITH CHECK).
+- Zaduženog saradnika menja samo vlasnik agencije.
+- `deadlines` sa `client_company_id IS NULL` ostaju vidljivi celoj agenciji.
+
+
+
+## Changelog 2026-07-30 — AI asistent, Faza A (read alati)
+
+Chat asistent na `/agencija/asistent` koji odgovara na pitanja o podacima preko
+OpenAI function calling-a. Faza A ima samo alate za čitanje; write akcije sa
+potvrdom dolaze u Fazi B.
+
+| Stavka | Detalj |
+|--------|--------|
+| Provider | OpenAI Chat Completions, `tools` + `strict: true`, raw `fetch` (bez SDK-a) — isti obrazac kao embeddings/transkripcija |
+| Model | `OPENAI_AGENT_MODEL`, podrazumevano `gpt-4o` |
+| Ruta | `POST /api/assistant/chat`, `maxDuration = 120`, bez streaminga |
+| Petlja | `lib/agent/run.ts` — najviše 4 kruga alata, u poslednjem se alati sklanjaju da model mora da odgovori tekstom |
+| Alati | `getVisitCountByAgencyUser`, `getUpcomingDeadlines`, `getEmployeesWithoutComplianceRecords`, `getClientSummary`, `searchFieldVisits` |
+| Deljeni upiti | `lib/queries/{clients,compliance,field-visits}.ts` — koriste ih i alati i rute |
+| RAG | `/api/search` izvučen u `lib/search/field-visits.ts`; ruta je sada tanak omotač |
+| Istorija | Bez tabele — klijent šalje poslednjih 20 poruka |
+| Limit | `lib/agent/rate-limit.ts` — 15 zahteva / 5 min po korisniku (opšti limiter je 120/min po IP-u, prelabav za LLM rutu) |
+| UI | `/agencija/asistent`, `AssistantChat` + `ToolTraceCard`; nav link za sve članove agencije |
+
+**Bezbednost:** alati nikad ne grade SQL i nikad ne primaju `agency_id` ni UUID
+kroz argumente. Svaki alat radi kroz `ToolContext.supabase` — klijent sesije
+korisnika, dakle RLS. Opseg klijenata se računa jednom po zahtevu preko
+`clientIdsInScope`. ESLint pravilo u `.eslintrc.json` zabranjuje uvoz
+`@/lib/supabase/admin` unutar `lib/agent/**`.
+
+**Razrešavanje imena:** model šalje `client_name` / `worker_name` kao tekst, a
+`lib/agent/tools/shared.ts` ih razrešava u ID unutar opsega korisnika. Kod
+višeznačnog ili nepostojećeg imena alat vraća `needs_clarification` i model
+pita korisnika umesto da pogađa.
+
+*Poslednje ažuriranje: 2026-07-30 (AI asistent Faza A).*
 
 

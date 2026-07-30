@@ -34,6 +34,14 @@ export type Messages = {
     switchToSr: string;
     switchToEn: string;
   };
+  notifications: {
+    title: string;
+    open: string;
+    empty: string;
+    markAllRead: string;
+    loadFailed: string;
+    unreadCount: string;
+  };
   roles: Record<RoleKey, string> & { unknownInDb: string };
   auth: {
     workerRegister: {
@@ -258,6 +266,7 @@ export type Messages = {
       clients: string;
       fieldVisits: string;
       search: string;
+      assistant: string;
       reportTemplates: string;
       invites: string;
       delegations: string;
@@ -613,6 +622,32 @@ export type Messages = {
       queryTooShort: string;
       similarityBadge: string;
       allRiskLevels: string;
+    };
+    assistant: {
+      title: string;
+      intro: string;
+      inputLabel: string;
+      inputPlaceholder: string;
+      send: string;
+      sending: string;
+      thinking: string;
+      emptyTitle: string;
+      emptyHint: string;
+      suggestions: readonly string[];
+      toolsUsed: string;
+      toolFailed: string;
+      newChat: string;
+      disclaimer: string;
+      roleYou: string;
+      roleAssistant: string;
+      historyTrimmed: string;
+      toolLabels: {
+        getVisitCountByAgencyUser: string;
+        getUpcomingDeadlines: string;
+        getEmployeesWithoutComplianceRecords: string;
+        getClientSummary: string;
+        searchFieldVisits: string;
+      };
     };
   };
   dataImport: {

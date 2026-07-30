@@ -18,6 +18,7 @@ export function AgencyShell({
     { href: "/agencija/klijenti", label: m.agencija.nav.clients },
     { href: "/agencija/field-visits", label: m.agencija.nav.fieldVisits },
     { href: "/agencija/pretraga", label: m.agencija.nav.search },
+    { href: "/agencija/asistent", label: m.agencija.nav.assistant },
     ...(canManageTemplates
       ? [
           {

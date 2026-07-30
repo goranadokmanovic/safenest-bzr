@@ -25,6 +25,14 @@ export const sr: Messages = {
     switchToSr: "Prebaci na srpski",
     switchToEn: "Prebaci na engleski",
   },
+  notifications: {
+    title: "Obaveštenja",
+    open: "Otvori obaveštenja",
+    empty: "Nema obaveštenja.",
+    markAllRead: "Označi sve kao pročitano",
+    loadFailed: "Ne mogu da učitam obaveštenja.",
+    unreadCount: "{count} nepročitanih",
+  },
   roles: {
     super_admin: "Super administrator",
     agency_owner: "Vlasnik agencije",
@@ -279,6 +287,7 @@ export const sr: Messages = {
       clients: "Klijenti",
       fieldVisits: "Terenske posete",
       search: "Pametna pretraga",
+      assistant: "AI asistent",
       reportTemplates: "Šabloni zapisnika",
       invites: "Pozivnice",
       delegations: "Delegacije",
@@ -663,6 +672,40 @@ export const sr: Messages = {
       queryTooShort: "Unesite bar 2 karaktera ili izaberite nivo rizika.",
       similarityBadge: "{percent}% poklapanje",
       allRiskLevels: "Svi nivoi rizika",
+    },
+    assistant: {
+      title: "AI asistent",
+      intro:
+        "Pitaj o svojim klijentima, rokovima i terenskim posetama. Asistent čita samo podatke koje i ti vidiš u aplikaciji.",
+      inputLabel: "Pitanje za asistenta",
+      inputPlaceholder: "Npr. koji rokovi ističu u narednih 30 dana?",
+      send: "Pošalji",
+      sending: "Šaljem…",
+      thinking: "Asistent razmišlja…",
+      emptyTitle: "Postavi prvo pitanje",
+      emptyHint: "Evo nekoliko primera od kojih možeš da počneš:",
+      suggestions: [
+        "Koji rokovi ističu u narednih 30 dana?",
+        "Koliko sam poseta obavio prošlog meseca?",
+        "Koji radnici nemaju unet lekarski pregled?",
+        "Nađi posete gde je bilo problema sa protivpožarnom opremom.",
+      ],
+      toolsUsed: "Izvor podataka",
+      toolFailed: "Alat nije uspeo",
+      newChat: "Novi razgovor",
+      disclaimer:
+        "Asistent može da pogreši. Proveri važne podatke pre nego što ih koristiš u zvaničnoj dokumentaciji.",
+      roleYou: "Ti",
+      roleAssistant: "Asistent",
+      historyTrimmed:
+        "Razgovor je dugačak — starije poruke se više ne šalju asistentu.",
+      toolLabels: {
+        getVisitCountByAgencyUser: "Broj poseta po članu agencije",
+        getUpcomingDeadlines: "Rokovi koji ističu",
+        getEmployeesWithoutComplianceRecords: "Radnici bez zapisa",
+        getClientSummary: "Pregled klijenta",
+        searchFieldVisits: "Pretraga terenskih poseta",
+      },
     },
   },
   dataImport: {

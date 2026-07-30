@@ -25,6 +25,14 @@ export const en: Messages = {
     switchToSr: "Switch to Serbian",
     switchToEn: "Switch to English",
   },
+  notifications: {
+    title: "Notifications",
+    open: "Open notifications",
+    empty: "No notifications.",
+    markAllRead: "Mark all as read",
+    loadFailed: "Could not load notifications.",
+    unreadCount: "{count} unread",
+  },
   roles: {
     super_admin: "Super Admin",
     agency_owner: "Agency Owner",
@@ -279,6 +287,7 @@ export const en: Messages = {
       clients: "Clients",
       fieldVisits: "Field Visits",
       search: "Smart search",
+      assistant: "AI assistant",
       reportTemplates: "Report templates",
       invites: "Invites",
       delegations: "Delegations",
@@ -665,6 +674,40 @@ export const en: Messages = {
       queryTooShort: "Enter at least 2 characters or select a risk level.",
       similarityBadge: "{percent}% match",
       allRiskLevels: "All risk levels",
+    },
+    assistant: {
+      title: "AI assistant",
+      intro:
+        "Ask about your clients, deadlines and field visits. The assistant only reads data you can already see in the app.",
+      inputLabel: "Question for the assistant",
+      inputPlaceholder: "E.g. which deadlines expire in the next 30 days?",
+      send: "Send",
+      sending: "Sending…",
+      thinking: "The assistant is thinking…",
+      emptyTitle: "Ask your first question",
+      emptyHint: "Here are a few examples to start with:",
+      suggestions: [
+        "Which deadlines expire in the next 30 days?",
+        "How many visits did I complete last month?",
+        "Which workers have no medical exam on record?",
+        "Find visits with fire safety equipment issues.",
+      ],
+      toolsUsed: "Data source",
+      toolFailed: "Tool failed",
+      newChat: "New chat",
+      disclaimer:
+        "The assistant can make mistakes. Verify important data before using it in official documentation.",
+      roleYou: "You",
+      roleAssistant: "Assistant",
+      historyTrimmed:
+        "This conversation is long — older messages are no longer sent to the assistant.",
+      toolLabels: {
+        getVisitCountByAgencyUser: "Visit count per agency member",
+        getUpcomingDeadlines: "Upcoming deadlines",
+        getEmployeesWithoutComplianceRecords: "Workers without records",
+        getClientSummary: "Client overview",
+        searchFieldVisits: "Field visit search",
+      },
     },
   },
   dataImport: {

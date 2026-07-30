@@ -9,6 +9,7 @@ import { LogoutButton } from "@/components/auth/logout-button";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { LocaleSwitcherInline } from "@/components/i18n/LocaleSwitcher";
 import { SessionUserBadge } from "@/components/layout/SessionUserBadge";
+import { NotificationsBell } from "@/components/layout/NotificationsBell";
 
 export type SidebarLink = {
   href: string;
@@ -201,6 +202,7 @@ export function AppShell({
             </Link>
           </div>
           <div className="flex items-center gap-2.5 sm:gap-4">
+            <NotificationsBell />
             <SessionUserBadge />
             <LocaleSwitcherInline />
             <ThemeToggle />

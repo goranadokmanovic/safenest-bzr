@@ -2279,6 +2279,21 @@
     backdrop-filter: blur(20px) saturate(1.2);
   }
 
+  .bzr-notif-bell {
+    color: rgb(var(--color-accent));
+  }
+
+  .bzr-notif-bell:hover {
+    box-shadow: 0 0 0 3px rgb(var(--color-accent) / 0.14);
+  }
+
+  .bzr-notif-badge {
+    background: rgb(var(--color-danger)) !important;
+    color: #fff !important;
+    box-shadow: 0 2px 8px rgb(var(--color-danger) / 0.45);
+    letter-spacing: 0.02em;
+  }
+
   /* Inicijali ulogovanog korisnika u topbaru */
   .bzr-user-avatar {
     @apply inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-display text-xs font-semibold;

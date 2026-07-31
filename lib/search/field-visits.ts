@@ -101,11 +101,17 @@ function mapVisitRows(
 /**
  * `agencyId === null` znači super_admin (bez filtera po agenciji).
  * Sve ostalo prolazi kroz prosleđeni `supabase` klijent, pa važi RLS pozivaoca.
+ *
+ * `clientIds` je opseg saradnika iz lib/api/client-scope.ts; `null` = bez
+ * sužavanja. Filtriranje mora ovde, u aplikaciji, jer je RLS nad `field_visits`
+ * na nivou agencije — saradnik bi kroz pretragu inače video posete klijenata
+ * koji mu nisu dodeljeni.
  */
 export async function searchFieldVisits(
   supabase: SupabaseClient,
   agencyId: string | null,
   input: FieldVisitSearchInput,
+  clientIds: string[] | null = null,
 ): Promise<FieldVisitSearchOutcome> {
   const queryText = input.query.trim();
   const riskLevel = input.riskLevel ?? detectRiskLevel(queryText) ?? undefined;
@@ -131,6 +137,9 @@ export async function searchFieldVisits(
 
     if (agencyId) {
       dbQuery = dbQuery.eq("agency_id", agencyId);
+    }
+    if (clientIds !== null) {
+      dbQuery = dbQuery.in("client_company_id", clientIds);
     }
 
     const { data, error } = await dbQuery;
@@ -172,10 +181,18 @@ export async function searchFieldVisits(
     };
   }
 
+  const limit = input.limit ?? 30;
+
+  // RPC rangira po sličnosti preko cele agencije, a opseg sečemo tek ovde, pa
+  // bi traženje tačno `limit` redova lako vratilo samo tuđe posete i ostavilo
+  // prazan rezultat. Zato uzimamo zalihu i skraćujemo posle filtriranja.
+  const fetchCount =
+    clientIds === null ? limit : Math.min(Math.max(limit * 5, 50), 200);
+
   const { data, error } = await supabase.rpc("match_field_visits", {
     query_embedding: queryEmbedding,
     match_agency_id: agencyId,
-    match_count: input.limit ?? 30,
+    match_count: fetchCount,
     match_threshold: input.minSimilarity ?? 0.3,
     match_risk_level: riskLevel ?? null,
   });
@@ -189,9 +206,16 @@ export async function searchFieldVisits(
     };
   }
 
+  const rows = (data ?? []) as FieldVisitSearchRow[];
+  let scoped = rows;
+  if (clientIds !== null) {
+    const allowed = new Set(clientIds);
+    scoped = rows.filter((r) => allowed.has(r.client_company_id)).slice(0, limit);
+  }
+
   return {
     ok: true,
-    results: (data ?? []) as FieldVisitSearchRow[],
+    results: scoped,
     detectedRiskLevel: riskLevel ?? null,
   };
 }

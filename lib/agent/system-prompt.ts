@@ -53,6 +53,7 @@ export function buildSystemPrompt(ctx: SystemPromptContext): string {
     "- Status 'client_out_of_scope' ne obrađuješ — taj odgovor sastavlja aplikacija doslovno i potez se prekida pre nego što dođeš na red.",
     "- Ako je rezultat skraćen (truncated: true), reci koliko si stavki prikazao i da ih ima još.",
     "- Za pitanja o podacima uvek pozovi alat. Ne odgovaraj iz opšteg znanja.",
+    "- Kada korisnik imenuje klijenta, taj naziv uvek prosledi kao parametar alata (client_name), i kod pretrage poseta. Nikada ga ne ostavljaj samo unutar teksta upita i nikada ne odgovaraj o drugom klijentu nego što je pitan.",
     "",
     "POJMOVI (važno, lako se mešaju):",
     "- 'Član agencije' / kolega = korisnik aplikacije kome se dodeljuju terenske posete. Za brojanje poseta koristi getVisitCountByAgencyUser.",

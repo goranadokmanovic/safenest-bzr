@@ -1263,6 +1263,59 @@ Ista funkcija se koristi i u `ToolTraceCard`, pa kartica i odgovor ne mogu da
 se raziđu. Pravilo iz sistemskog prompta je uklonjeno jer model taj status više
 ni ne vidi.
 
-*Poslednje ažuriranje: 2026-07-31 (asistent: klijent van opsega).*
+## Changelog 2026-07-31 — BEZBEDNOST: pretraga poseta je zaobilazila RLS
+
+Traženo je bilo zašto asistent na pitanje o klijentu van opsega saradnika
+(„da li Nail & Hair studio ima visoki rizik?”) vrati rezultate **drugog**
+klijenta umesto poruke o odbijenom pristupu. Uzrok je bio dublji od formulacije.
+
+**Nalaz.** RPC `match_field_visits` (semantička pretraga terenskih poseta) nije
+postojao ni u jednoj migraciji — kreiran je ručno u Supabase-u — i ponašao se
+kao SECURITY DEFINER. Poziv **javnim anon ključem, bez ijedne sesije**, sa
+`match_agency_id => null`, vraćao je sve terenske posete iz baze zajedno sa
+napomenama:
+
+```
+anon (bez sesije): 14 redova
+service_role     : 14 redova
+```
+
+Anon ključ se šalje u pretraživač, a agenciju bira pozivalac kroz argument, pa
+je to bilo čitanje poseta svih agencija bez prijave. Granica agencije nije
+postojala; u bazi je trenutno samo jedna agencija, pa se posledica nije videla.
+
+**Popravka (tri sloja).**
+
+| Sloj | Šta je urađeno |
+|------|----------------|
+| Baza | `20260731140000_match_field_visits_security.sql` — `SECURITY INVOKER` + `revoke execute` sa PUBLIC/anon, `grant` za `authenticated`/`service_role` |
+| Aplikacija | `lib/search/field-visits.ts` prima `clientIds` i seče rezultate na opseg; prosleđuju i `/api/search` i alat asistenta |
+| Asistent | `searchFieldVisits` dobio parametar `client_name` koji ide kroz `resolveClientArg`, pa se za klijenta van opsega vraća ista fiksna poruka kao kod ostalih alata |
+
+Migracija **ne dira telo funkcije** — nema ga u repozitorijumu, pa bi pisanje
+napamet promenilo ponašanje pretrage. Menja se samo bezbednosni model, kroz
+petlju po `pg_proc`, pa ne zavisi od tačnih tipova argumenata.
+
+**Zašto i aplikativni filter, kad je RLS vraćen:** politika nad `field_visits`
+je `field_visits_agency_access`, dakle na nivou **agencije**, ne po dodeljenom
+klijentu. Sam RLS zato ne bi sprečio saradnika da kroz pretragu vidi posete
+tuđih klijenata. Kad je opseg sužen, od RPC-a se traži više redova nego što
+treba i lista se skraćuje tek posle filtriranja — inače bi top-N po sličnosti
+popunili tuđi rezultati i odgovor bi ispao prazan.
+
+**Provera:** `node --env-file=.env.local supabase/scripts/verify-match-field-visits-rls.mjs`
+ponavlja napad anon ključem. Posle migracije: `42501 permission denied for
+function match_field_visits`. Skript vraća izlazni kod 1 ako iko dobije red.
+
+**Ostaje da se uradi:** telo `match_field_visits` prekopirati iz Supabase-a u
+migraciju (`20260731150000_match_field_visits_definition.sql`), da funkcija sa
+ovakvom odgovornošću ne živi samo u produkciji.
+
+**Pouka:** svaki RPC kreiran ručno u Studiju je nevidljiv za code review. Nova
+SECURITY DEFINER funkcija mora da ide kroz migraciju i da eksplicitno izvodi
+opseg iz `auth.uid()`, a ne iz argumenta koji zadaje pozivalac — kao što radi
+`client_exists_in_agency`.
+
+*Poslednje ažuriranje: 2026-07-31 (bezbednosna popravka pretrage poseta).*
 
 

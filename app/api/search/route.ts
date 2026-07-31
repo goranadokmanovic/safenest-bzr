@@ -1,3 +1,4 @@
+import { clientIdsInScope } from "@/lib/api/client-scope";
 import { getFieldMutationContext } from "@/lib/api/mutation-guards";
 import { isClientPortalUser, isSuperAdmin } from "@/lib/api/session";
 import { jsonError, jsonOk } from "@/lib/api/responses";
@@ -35,7 +36,17 @@ export const POST = withApiCatch(async (request: Request) => {
     return jsonError("Niste dodeljeni agenciji.", 403, { code: "FORBIDDEN" });
   }
 
-  const outcome = await searchFieldVisits(supabase, agencyId, parsed.data);
+  const visible = await clientIdsInScope(supabase, profile);
+  if (!visible.ok) {
+    return jsonError(visible.message, 400, { code: "DATABASE_ERROR" });
+  }
+
+  const outcome = await searchFieldVisits(
+    supabase,
+    agencyId,
+    parsed.data,
+    visible.clientIds,
+  );
   if (!outcome.ok) {
     return jsonError(outcome.message, outcome.status, { code: outcome.code });
   }

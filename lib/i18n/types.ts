@@ -269,6 +269,7 @@ export type Messages = {
       assistant: string;
       reportTemplates: string;
       invites: string;
+      team: string;
       delegations: string;
     };
     home: {
@@ -324,6 +325,29 @@ export type Messages = {
       expiresAt: string;
       revoke: string;
       genericInvite: string;
+    };
+    team: {
+      title: string;
+      intro: string;
+      inviteCta: string;
+      inviteClose: string;
+      seats: string;
+      seatsUnlimited: string;
+      listTitle: string;
+      empty: string;
+      colName: string;
+      colEmail: string;
+      colRole: string;
+      colJoined: string;
+      colActions: string;
+      you: string;
+      noName: string;
+      unknownJoined: string;
+      remove: string;
+      removeConfirm: string;
+      removed: string;
+      roleChanged: string;
+      roleChangeLabel: string;
     };
     reportTemplates: {
       title: string;

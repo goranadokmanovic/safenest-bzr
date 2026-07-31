@@ -1734,6 +1734,7 @@
     — opaque fill was creating a fake horizontal “cut”.
   */
   .bzr-field-visits-page .bzr-table-wrap,
+  .bzr-team-page .bzr-table-wrap,
   .bzr-clients-page .bzr-table-wrap {
     background: rgb(var(--color-surface) / 0.42);
     backdrop-filter: blur(10px);
@@ -1748,6 +1749,7 @@
   */
   .bzr-clients-table,
   .bzr-field-visits-table,
+  .bzr-team-table,
   .bzr-employees-table {
     overflow: visible !important;
     padding: 0.35rem 0.45rem 0.65rem;
@@ -1755,6 +1757,7 @@
 
   .bzr-clients-table table,
   .bzr-field-visits-table table,
+  .bzr-team-table table,
   .bzr-employees-table table {
     width: 100% !important;
     min-width: 0 !important;
@@ -1765,6 +1768,7 @@
 
   .bzr-clients-table thead tr,
   .bzr-field-visits-table thead tr,
+  .bzr-team-table thead tr,
   .bzr-employees-table thead tr {
     background: transparent;
     border: 0;
@@ -1772,6 +1776,7 @@
 
   .bzr-clients-table th,
   .bzr-field-visits-table th,
+  .bzr-team-table th,
   .bzr-employees-table th {
     white-space: normal;
     word-break: break-word;
@@ -1783,6 +1788,7 @@
 
   .bzr-clients-table td,
   .bzr-field-visits-table td,
+  .bzr-team-table td,
   .bzr-employees-table td {
     padding: 0.65rem 0.35rem;
     vertical-align: middle;
@@ -1800,6 +1806,7 @@
 
   .bzr-clients-table td:first-child,
   .bzr-field-visits-table td:first-child,
+  .bzr-team-table td:first-child,
   .bzr-employees-table td:first-child {
     border-left: 1px solid rgb(var(--color-border) / 0.08);
     border-radius: 0.85rem 0 0 0.85rem;
@@ -1807,6 +1814,7 @@
 
   .bzr-clients-table td:last-child,
   .bzr-field-visits-table td:last-child,
+  .bzr-team-table td:last-child,
   .bzr-employees-table td:last-child {
     border-right: 1px solid rgb(var(--color-border) / 0.08);
     border-radius: 0 0.85rem 0.85rem 0;

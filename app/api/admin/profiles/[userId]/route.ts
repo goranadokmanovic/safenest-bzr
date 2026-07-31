@@ -14,6 +14,7 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 import { insertAdminAudit } from "@/lib/admin/audit";
 import { BILLABLE_AGENCY_ROLES } from "@/lib/plans/seats";
 import { maxSeatsForPlanTier } from "@/lib/plans/catalog";
+import { syncAgencyMembership } from "@/lib/queries/agency-members";
 
 type Params = { params: Promise<{ userId: string }> };
 
@@ -142,6 +143,18 @@ export const PATCH = withApiCatch(async (request: Request, { params }: Params) =
   }
   if (!data) {
     return jsonError("Profil nije pronađen.", 404, { code: "NOT_FOUND" });
+  }
+
+  const sync = await syncAgencyMembership(
+    admin,
+    userId,
+    data.agency_id,
+    data.role,
+  );
+  if (!sync.ok) {
+    return jsonError(`Profil je izmenjen, ali članstvo nije: ${sync.message}`, 400, {
+      code: "MEMBERSHIP_SYNC_FAILED",
+    });
   }
 
   const { error: auditErr } = await insertAdminAudit(admin, {

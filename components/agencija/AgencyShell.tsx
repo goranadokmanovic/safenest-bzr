@@ -25,7 +25,7 @@ export function AgencyShell({
             href: "/agencija/report-templates",
             label: m.agencija.nav.reportTemplates,
           },
-          { href: "/agencija/pozivnice", label: m.agencija.nav.invites },
+          { href: "/agencija/radnici", label: m.agencija.nav.team },
           { href: "/agencija/delegacije", label: m.agencija.nav.delegations },
         ]
       : []),

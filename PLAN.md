@@ -1188,6 +1188,44 @@ korisnika, dakle RLS. Opseg klijenata se računa jednom po zahtevu preko
 višeznačnog ili nepostojećeg imena alat vraća `needs_clarification` i model
 pita korisnika umesto da pogađa.
 
-*Poslednje ažuriranje: 2026-07-30 (AI asistent Faza A).*
+
+
+## Changelog 2026-07-31 — Radnici agencije (tab za članove + pozivnice)
+
+Vlasnik agencije do sada nije imao ekran na kom vidi svoje ljude. `GET
+/api/agency/members` je postojao još od Faze 3, ali ga nijedna komponenta nije
+pozivala, a pozivnice su živele na zasebnoj stranici.
+
+| Stavka | Detalj |
+|--------|--------|
+| Ruta | `/agencija/radnici` (owner-only); `/agencija/pozivnice` sada redirect na nju |
+| Migracija | `20260731120000_agency_members_manage.sql` — write RLS politike + `joined_at` backfill |
+| API | `GET/PATCH/DELETE /api/agency/members` |
+| Deljeni upiti | `lib/queries/agency-members.ts` |
+| UI | `components/agencija/AgencyTeamManager.tsx` (zamenio `AgencyInvitesManager`) |
+| i18n | `agencija.team.*` + `agencija.nav.team` |
+
+**Izvor istine je `profiles`, ne `agency_members`.** Lista se gradi iz
+`profiles` po `agency_id`, a `agency_members` daje samo metapodatke
+(`joined_at`, `invited_by`). Razlog je bug koji je nađen pri planiranju:
+super admin PATCH nad profilom menja `profiles.role` i `profiles.agency_id`,
+ali `agency_members` red ostaje kod stare agencije — čovek bi se pojavio u
+listi pogrešne agencije i nestao iz prave. Popravljeno je i u korenu:
+`syncAgencyMembership()` se sada zove iz `/api/admin/profiles/[userId]`.
+
+Provera baze pre implementacije nije našla nijedan neusklađen red (1 agencija,
+2 profila, 2 članstva), pa backfill migracija nije ni pisana.
+
+**Zašto write operacije idu preko service role:** `authenticated` nad
+`profiles` ima samo `grant select` i `grant update (full_name, locale)`, pa
+promena uloge i uklanjanje ne mogu kroz sesiju korisnika. Rute koriste admin
+klijent uz proveru `canManageAgencyBilling` i pripadnost istoj agenciji. RLS
+politike nad `agency_members` iz migracije su dubinska zaštita.
+
+**Zaštite pri uklanjanju:** vlasnik ne može ukloniti sebe niti poslednjeg
+preostalog vlasnika; uklanjanje čisti `client_companies.assigned_collaborator_id`
+za tu agenciju, jer bi inače ti klijenti ispali iz opsega svih saradnika.
+
+*Poslednje ažuriranje: 2026-07-31 (Radnici agencije).*
 
 

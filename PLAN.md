@@ -1307,9 +1307,10 @@ popunili tuđi rezultati i odgovor bi ispao prazan.
 ponavlja napad anon ključem. Posle migracije: `42501 permission denied for
 function match_field_visits`. Skript vraća izlazni kod 1 ako iko dobije red.
 
-**Ostaje da se uradi:** telo `match_field_visits` prekopirati iz Supabase-a u
-migraciju (`20260731150000_match_field_visits_definition.sql`), da funkcija sa
-ovakvom odgovornošću ne živi samo u produkciji.
+**Verzija u repou:** `20260731150000_match_field_visits_definition.sql` —
+produkciono telo (5 argumenata) iz `pg_get_functiondef`, drop dve neupotrebljene
+preopterećene verzije (3/4 arg.), kolona `embedding vector(1536)` + HNSW indeks
+ako ne postoji, i isti SECURITY INVOKER / revoke anon model kao u 140000.
 
 **Pouka:** svaki RPC kreiran ručno u Studiju je nevidljiv za code review. Nova
 SECURITY DEFINER funkcija mora da ide kroz migraciju i da eksplicitno izvodi

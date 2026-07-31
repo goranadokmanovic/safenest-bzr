@@ -150,12 +150,16 @@ SafeNest BZR je **multi-tenant SaaS** za agencije bezbednosti i zdravlja na radu
 | **Super admin** | Operater platforme; vidi sve agencije, menja pretplate, dodeljuje uloge, audit log. |
 | **Vlasnik agencije** (`agency_owner`) | Kreira agenciju, upravlja pretplatom, menja podatke agencije, pun CRUD nad klijentima. |
 | **Saradnik** (`agency_collaborator`) | CRUD nad klijentima, zaposlenima, dokumentima, rokovima (uz aktivnu pretplatu). |
-| **Terenski radnik** (`field_worker`) | Čitanje agencijskih podataka (budući terenski modul). |
+| **Terenski radnik** (`field_worker`) | Čitanje agencijskih podataka; može biti zadužen za terensku posetu. Terenski modul je implementiran (v. 13.1). |
 | **Klijentski korisnik** (`client_user`) | Budući klijentski portal; trenutno **nema** pristup agencijskim API rutama. |
 
 ### 1.2 Van opsega (trenutna verzija)
 
-Terenske posete, glas/AI, inspekcije, pravna baza, Excel/API import, generisanje PDF obrazaca, enterprise API, pun tok pozivnica, klijentski portal UI, i18n (sr/en), produkcijski deploy.
+Inspekcije, pravna baza, Excel/API import, generisanje PDF obrazaca, enterprise API, pun tok pozivnica, klijentski portal UI, produkcijski deploy.
+
+Terenske posete (sa offline-first sync-om), glasovni unos i AI asistent bili su
+prvobitno van opsega, ali su u međuvremenu implementirani — v. sekciju 13.
+i18n (sr/en) je delimično implementiran.
 
 ---
 
@@ -217,6 +221,11 @@ Migracije: `supabase/migrations/`.
 
 - Korisnik vidi/menja samo zapise svoje agencije (`profile_matching_agency`).
 - Super admin ima pun pristup (`is_super_admin()`).
+- **Opseg saradnika** (`20260730210000_client_collaborator_scope.sql`):
+  `agency_collaborator` ne vidi sve klijente agencije, već samo one gde je
+  `assigned_collaborator_id = on`, plus klijente na čijoj poseti učestvuje.
+  Važi za `client_companies`, `employees`, `compliance_records`, `documents` i
+  `deadlines`; app sloj preslikava istu logiku u `lib/api/client-scope.ts`.
 - `profiles`: korisnik menja samo `full_name` i `locale` (column-level grant).
 - Dopuna Faze 5 (`20250626120000_phase5_rls_storage_notifications.sql`):
   - `agencies` UPDATE — vlasnik agencije
@@ -496,6 +505,44 @@ safenest-bzr/
 | Klijenti, zaposleni, dokumenti | Specifikovano i implementirano |
 | Feature gating, Stripe, admin | Specifikovano i implementirano |
 | Rokovi CRUD, obaveštenja create/read-all | Specifikovano, **delimično** implementirano |
-| Teren, AI, portal, i18n, deploy | Specifikovano kao van opsega / kasnije |
+| Terenske posete + offline-first sync | Specifikovano i implementirano |
+| AI asistent — Faza A (alati za čitanje) | Specifikovano i implementirano |
+| AI asistent — Faza B (write akcije uz potvrdu) | Sledeći planirani korak |
+| i18n (sr/en) | **Delimično** implementirano |
+| Deploy | Pripremljeno za Vercel (cron + env), bez potvrde produkcije |
+| Klijentski portal (UI za `client_user`) | Van opsega / kasnije |
+
+### 13.1 Terenske posete
+
+Modul je završen odavno i pokriva ceo tok posete: kreiranje i vođenje
+(`/agencija/field-visits`), transkripciju audija, popunjavanje i generisanje
+izveštaja, zatvaranje izveštaja, saradnike na poseti i zahtev za ponovno
+otvaranje. Rute su pod `app/api/field-visits/*`.
+
+Offline-first rad je izveden preko IndexedDB-a (localforage) i outbox reda u
+`lib/offline/*`; red se prazni na `POST /api/sync`, a Service Worker
+(`public/sw.js`) koristi Background Sync. Uključuje se zastavicom
+`NEXT_PUBLIC_ENABLE_OFFLINE`.
+
+### 13.2 AI asistent
+
+Chat na `/agencija/asistent` odgovara na pitanja o podacima preko OpenAI
+function calling-a (`POST /api/assistant/chat`, jezgro u `lib/agent/*`).
+Registrovano je pet alata, svi **samo za čitanje**:
+
+| Alat | Šta vraća |
+|------|-----------|
+| `getVisitCountByAgencyUser` | Broj poseta po članu agencije u periodu |
+| `getUpcomingDeadlines` | Rokovi koji ističu u narednih N dana |
+| `getEmployeesWithoutComplianceRecords` | Zaposleni bez compliance zapisa |
+| `getClientSummary` | Pregled klijenta (zaposleni, posete, rokovi) |
+| `searchFieldVisits` | Postojeća RAG pretraga terenskih poseta |
+
+Alati nikad ne grade SQL niti primaju `agency_id` kroz argumente — svaki radi
+kroz Supabase klijent sesije korisnika, pa nasleđuje RLS i opseg saradnika.
+
+**Faza B** je sledeći planirani korak: write akcije (kreiranje posete, pomeranje
+roka, dodela saradnika klijentu) koje agent samo *predlaže*, a korisnik mora
+eksplicitno da potvrdi pre izvršenja.
 
 Za ažuran žurnal razvoja: [`PLAN.md`](PLAN.md).

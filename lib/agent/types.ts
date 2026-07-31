@@ -52,7 +52,16 @@ export type ToolContext = {
 };
 
 export type ToolOutcome =
-  | { ok: true; data: unknown }
+  | {
+      ok: true;
+      data: unknown;
+      /**
+       * Kada je postavljen, ovaj tekst ide korisniku doslovno i potez se
+       * prekida — model ga ne preformuliše. Za slučajeve gde formulacija mora
+       * biti ista svaki put (v. lib/agent/fixed-replies.ts).
+       */
+      finalReply?: string;
+    }
   | { ok: false; error: string };
 
 export type AgentTool = {

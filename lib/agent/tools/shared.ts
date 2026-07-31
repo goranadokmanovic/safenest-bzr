@@ -12,6 +12,7 @@ import {
   type ScopedClient,
 } from "@/lib/queries/clients";
 import { listAgencyWorkers, type AgencyWorkerOption } from "@/lib/field-visits/list";
+import { clientOutOfScopeReply } from "@/lib/agent/fixed-replies";
 import type { ToolContext, ToolOutcome } from "@/lib/agent/types";
 
 export type ClientArg =
@@ -54,8 +55,10 @@ export async function resolveClientArg(
           data: {
             status: "client_out_of_scope",
             searched_for: name,
-            hint: "Klijent tog naziva postoji u agenciji, ali nije dodeljen ovom korisniku, pa mu podaci nisu dostupni. Reci mu to jasno i uputi ga da se obrati vlasniku agencije. Ne otkrivaj nijedan podatak o klijentu, ni ko je zadužen za njega.",
           },
+          // Fiksni tekst: odbijanje pristupa ne prepuštamo modelu da ga
+          // preformuliše, jer sme da oda samo to da klijent nije dodeljen.
+          finalReply: clientOutOfScopeReply(name),
         },
       };
     }

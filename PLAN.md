@@ -1255,6 +1255,14 @@ da ispituje postojanje klijenata u tuđoj agenciji.
 Dok migracija nije primenjena, RPC ne postoji, `clientExistsInAgency()` vraća
 `false` i poruka ostaje stara — bez pada.
 
+**Dopuna istog dana — fiksni tekst umesto modela.** Formulacija odbijanja
+pristupa se više ne prepušta modelu. `lib/agent/fixed-replies.ts` drži tačan
+tekst, alat ga vraća kroz novo polje `ToolOutcome.finalReply`, a `run.ts` tada
+prekida potez i šalje ga korisniku doslovno — bez dodatnog poziva modelu.
+Ista funkcija se koristi i u `ToolTraceCard`, pa kartica i odgovor ne mogu da
+se raziđu. Pravilo iz sistemskog prompta je uklonjeno jer model taj status više
+ni ne vidi.
+
 *Poslednje ažuriranje: 2026-07-31 (asistent: klijent van opsega).*
 
 

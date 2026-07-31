@@ -93,6 +93,10 @@ export async function runAgentTurn(
       tool_calls: completion.toolCalls,
     });
 
+    // Alat može da nametne doslovan odgovor. Izvršavamo sve pozive iz kruga da
+    // trag ostane potpun, pa tek onda prekidamo potez.
+    let forcedReply: string | null = null;
+
     for (const call of completion.toolCalls) {
       const tool = findTool(call.function.name);
       const args = parseToolArguments(call.function.arguments);
@@ -136,6 +140,14 @@ export async function runAgentTurn(
           ? serializeForModel(outcome.data)
           : JSON.stringify({ error: outcome.error }),
       });
+
+      if (outcome.ok && outcome.finalReply && forcedReply === null) {
+        forcedReply = outcome.finalReply;
+      }
+    }
+
+    if (forcedReply !== null) {
+      return { reply: forcedReply, toolTrace };
     }
   }
 

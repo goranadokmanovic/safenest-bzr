@@ -1,6 +1,7 @@
 "use client";
 
 import { useTranslations } from "@/components/i18n/locale-provider";
+import { clientOutOfScopeReply } from "@/lib/agent/fixed-replies";
 
 export type ToolTrace = {
   name: string;
@@ -201,7 +202,7 @@ function ToolBody({ trace }: { trace: ToolTrace }) {
   if (data.status === "client_out_of_scope") {
     return (
       <p className="text-xs text-ink/70">
-        Klijent postoji u agenciji, ali nije dodeljen vama.
+        {clientOutOfScopeReply(text(data.searched_for))}
       </p>
     );
   }

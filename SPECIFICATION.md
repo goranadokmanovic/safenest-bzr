@@ -221,7 +221,8 @@ Migracije: `supabase/migrations/`.
 
 - Korisnik vidi/menja samo zapise svoje agencije (`profile_matching_agency`).
 - Super admin ima pun pristup (`is_super_admin()`).
-- **Opseg saradnika** (`20260730210000_client_collaborator_scope.sql`):
+- **Opseg saradnika** — migracija `20260730210000_client_collaborator_scope.sql`,
+  primenjena 2026-07-31 i **aktivna u bazi**:
   `agency_collaborator` ne vidi sve klijente agencije, već samo one gde je
   `assigned_collaborator_id = on`, plus klijente na čijoj poseti učestvuje.
   Važi za `client_companies`, `employees`, `compliance_records`, `documents` i

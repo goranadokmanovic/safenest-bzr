@@ -1138,7 +1138,7 @@ RLS video **sve** klijente agencije.
 
 | Stavka | Detalj |
 |--------|--------|
-| Migracija | `20260730210000_client_collaborator_scope.sql` — **mora se primeniti u Supabase SQL Editoru** |
+| Migracija | `20260730210000_client_collaborator_scope.sql` — **primenjena u Supabase 2026-07-31**, opseg je aktivan u bazi |
 | DB helperi | `is_scoped_collaborator()`, `works_on_client_company(uuid)`, `client_company_in_scope(uuid, uuid, uuid)`, `client_company_in_scope_by_id(uuid)` |
 | Tabele pod novim opsegom | `client_companies`, `employees`, `compliance_records`, `documents`, `deadlines` (SELECT/INSERT/UPDATE/DELETE) |
 | App sloj | `lib/api/client-scope.ts` — `clientIdsInScope`, `applyClientScope`, `checkClientInScope`, `evaluateClientScope`, `requireClientInScope` |

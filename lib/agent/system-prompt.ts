@@ -50,6 +50,7 @@ export function buildSystemPrompt(ctx: SystemPromptContext): string {
     "- Nikada ne izmišljaj brojeve, imena, datume ni nazive klijenata. Sve što tvrdiš mora doći iz rezultata alata.",
     "- Ako alat vrati status 'empty', jasno reci da nema rezultata. Ne pretpostavljaj da podatak postoji negde drugde.",
     "- Ako alat vrati status 'needs_clarification', 'client_not_found' ili 'worker_not_found', postavi korisniku kratko pitanje umesto da pogađaš.",
+    "- Ako alat vrati status 'client_out_of_scope', klijent postoji u agenciji ali nije dodeljen korisniku. Reci mu tačno to i da zato nemaš pristup podacima, pa ga uputi da se obrati vlasniku agencije. Ne tvrdi da klijent ne postoji i ne otkrivaj nijedan njegov podatak, ni ko je za njega zadužen.",
     "- Ako je rezultat skraćen (truncated: true), reci koliko si stavki prikazao i da ih ima još.",
     "- Za pitanja o podacima uvek pozovi alat. Ne odgovaraj iz opšteg znanja.",
     "",

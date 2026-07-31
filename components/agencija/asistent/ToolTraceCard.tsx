@@ -198,6 +198,14 @@ function ToolBody({ trace }: { trace: ToolTrace }) {
   const data = asRecord(trace.data);
   if (!data) return <p className="text-ink/60">—</p>;
 
+  if (data.status === "client_out_of_scope") {
+    return (
+      <p className="text-xs text-ink/70">
+        Klijent postoji u agenciji, ali nije dodeljen vama.
+      </p>
+    );
+  }
+
   if (data.status === "needs_clarification" || data.status === "client_not_found" || data.status === "worker_not_found") {
     const candidates = Array.isArray(data.candidates)
       ? (data.candidates as unknown[]).map(text)

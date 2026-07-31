@@ -6,7 +6,11 @@
  * nestaje i cela klasa grešaka sa izmišljenim ID-jevima.
  */
 
-import { lookupClientByName, type ScopedClient } from "@/lib/queries/clients";
+import {
+  clientExistsInAgency,
+  lookupClientByName,
+  type ScopedClient,
+} from "@/lib/queries/clients";
 import { listAgencyWorkers, type AgencyWorkerOption } from "@/lib/field-visits/list";
 import type { ToolContext, ToolOutcome } from "@/lib/agent/types";
 
@@ -39,6 +43,23 @@ export async function resolveClientArg(
   }
 
   if (lookup.value.kind === "none") {
+    // Saradnik kroz RLS ne vidi klijente koji mu nisu dodeljeni, pa "nema
+    // pogotka" ne znači i "ne postoji". Bez ove provere poruka bi tvrdila da
+    // klijent ne postoji, iako postoji u agenciji.
+    if (ctx.clientIds !== null && (await clientExistsInAgency(ctx.supabase, name))) {
+      return {
+        kind: "halt",
+        outcome: {
+          ok: true,
+          data: {
+            status: "client_out_of_scope",
+            searched_for: name,
+            hint: "Klijent tog naziva postoji u agenciji, ali nije dodeljen ovom korisniku, pa mu podaci nisu dostupni. Reci mu to jasno i uputi ga da se obrati vlasniku agencije. Ne otkrivaj nijedan podatak o klijentu, ni ko je zadužen za njega.",
+          },
+        },
+      };
+    }
+
     return {
       kind: "halt",
       outcome: {

@@ -106,6 +106,27 @@ export async function lookupClientByName(
   return { ok: true, value: { kind: "many", candidates: rows } };
 }
 
+/**
+ * Postoji li klijent tog naziva u agenciji korisnika, bez obzira na njegov
+ * opseg. Ide kroz SECURITY DEFINER RPC koji vraća samo boolean — poziva se
+ * isključivo da bismo razlikovali „nema ga u agenciji” od „postoji, ali nije
+ * dodeljen tebi”. Pri grešci vraća false, pa poruka ostaje ona blaža.
+ */
+export async function clientExistsInAgency(
+  supabase: SupabaseClient,
+  rawName: string,
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc("client_exists_in_agency", {
+    p_name: rawName,
+  });
+
+  if (error) {
+    console.error("[clients] client_exists_in_agency failed", error.message);
+    return false;
+  }
+  return data === true;
+}
+
 export type ClientSummary = {
   client_id: string;
   client_name: string;

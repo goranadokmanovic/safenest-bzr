@@ -1226,6 +1226,35 @@ politike nad `agency_members` iz migracije su dubinska zaštita.
 preostalog vlasnika; uklanjanje čisti `client_companies.assigned_collaborator_id`
 za tu agenciju, jer bi inače ti klijenti ispali iz opsega svih saradnika.
 
-*Poslednje ažuriranje: 2026-07-31 (Radnici agencije).*
+
+
+## Changelog 2026-07-31 — asistent razlikuje „nema ga” od „van tvog opsega”
+
+Pošto saradnik kroz RLS ne vidi klijente koji mu nisu dodeljeni, asistent je na
+pitanje o takvom klijentu odgovarao da klijent **ne postoji** — netačno, jer
+postoji u agenciji, samo nije u opsegu tog korisnika.
+
+| Stavka | Detalj |
+|--------|--------|
+| Migracija | `20260731130000_client_exists_in_agency_rpc.sql` |
+| RPC | `client_exists_in_agency(text)` — SECURITY DEFINER, vraća **samo boolean** |
+| Upit | `clientExistsInAgency()` u `lib/queries/clients.ts` |
+| Alati | novi status `client_out_of_scope` iz `resolveClientArg` |
+| Prompt | pravilo kako model formuliše taj slučaj |
+| UI | `ToolTraceCard` prikazuje poseban tekst umesto „Nema poklapanja” |
+
+**Zašto RPC, a ne service role:** ESLint zabranjuje `@/lib/supabase/admin`
+unutar `lib/agent/**`, i s razlogom. SECURITY DEFINER funkcija rešava isto bez
+probijanja te granice, uz manju površinu — vraća isključivo `true`/`false`.
+
+**Šta se ne otkriva:** funkcija ne vraća id, naziv, ni zaduženog saradnika, a
+prompt izričito zabranjuje modelu da otkrije bilo koji podatak o klijentu.
+Agencija se izvodi iz `auth.uid()` i ne prima se kao argument, pa niko ne može
+da ispituje postojanje klijenata u tuđoj agenciji.
+
+Dok migracija nije primenjena, RPC ne postoji, `clientExistsInAgency()` vraća
+`false` i poruka ostaje stara — bez pada.
+
+*Poslednje ažuriranje: 2026-07-31 (asistent: klijent van opsega).*
 
 

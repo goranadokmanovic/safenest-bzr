@@ -18,8 +18,10 @@ export default async function AgencijaAsistentPage() {
       <PageCornerDecor kind="halftone" variant="canvas" />
       <div className="relative z-10 max-w-3xl">
         <BackButton href="/agencija" className="mb-3" />
-        <h1 className="text-2xl font-bold text-ink">{a.title}</h1>
-        <p className="mt-2 text-sm text-ink/75">{a.intro}</p>
+        <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
+          {a.title}
+        </h1>
+        <p className="mt-1 text-sm text-ink/75">{a.intro}</p>
         <AssistantChat />
       </div>
     </main>

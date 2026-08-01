@@ -6,10 +6,14 @@ const argsSchema = z.object({
   client_name: z.string().nullable(),
 });
 
+function isCollaboratorAudience(ctx: ToolContext): boolean {
+  return ctx.profile.role === "agency_collaborator";
+}
+
 /**
- * Lista klijenata u opsegu trenutnog korisnika.
- * Za „zadužen” — assigned_count (assigned_collaborator_id); širi opseg
- * (posete) je u count / visit_only_count.
+ * Lista klijenata vidljivih trenutnom korisniku.
+ * Owner / širi view: prirodan broj klijenata agencije.
+ * Saradnik: assigned vs dodatno vidljivo preko poseta.
  */
 export const getMyAssignedClients: AgentTool = {
   name: "getMyAssignedClients",
@@ -18,7 +22,7 @@ export const getMyAssignedClients: AgentTool = {
     function: {
       name: "getMyAssignedClients",
       description:
-        "Lista i broj klijenata u opsegu ulogovanog korisnika. Koristi za pitanja: „za koliko klijenata sam zadužen”, „koji su moji klijenti”, „koliko klijenata imam”. Za „zadužen” gledaj assigned_count (stroga dodela). Owner vidi celu agenciju (count). Opciono filtriraj po client_name.",
+        "Lista i broj klijenata vidljivih ulogovanom korisniku. Koristi za: „za koliko klijenata sam zadužen”, „koji su moji klijenti”, „koliko klijenata imam”. Za vlasnika vraća broj klijenata agencije; za saradnika razlikuje strogu dodelu i klijente vidljive preko poseta. Opciono filtriraj po client_name.",
       strict: true,
       parameters: {
         type: "object",
@@ -27,7 +31,7 @@ export const getMyAssignedClients: AgentTool = {
           client_name: {
             type: ["string", "null"],
             description:
-              "Opciona pretraga po nazivu klijenta. null = svi u opsegu.",
+              "Opciona pretraga po nazivu klijenta. null = svi vidljivi klijenti.",
           },
         },
         required: ["client_name"],
@@ -56,20 +60,59 @@ export const getMyAssignedClients: AgentTool = {
     if (!result.ok) return { ok: false, error: result.message };
 
     const value = result.value;
+    const collaborator = isCollaboratorAudience(ctx);
+    const searched = parsed.data.client_name;
+
+    if (!collaborator) {
+      if (value.count === 0) {
+        return {
+          ok: true,
+          data: {
+            status: "empty",
+            audience: "agency_owner",
+            client_count: 0,
+            searched_for: searched,
+            hint: searched?.trim()
+              ? "Nijedan klijent agencije ne odgovara tom nazivu. Formuliši prirodno — ne pominji zaduženje ni opseg."
+              : "Agencija trenutno nema klijenata. Formuliši prirodno — ne pominji zaduženje ni opseg.",
+          },
+        };
+      }
+
+      return {
+        ok: true,
+        data: {
+          status: "ok",
+          audience: "agency_owner",
+          client_count: value.count,
+          truncated: value.truncated,
+          searched_for: searched,
+          hint:
+            "Korisnik je vlasnik (ili vidi celu agenciju). Odgovori prirodno: npr. „Tvoja agencija ima N klijenata” / „Vodite N klijenata”. Koristi client_count. NIKADA ne pominji zadužen, opseg, assigned niti razliku assigned/visit.",
+          clients: value.clients.map((c) => ({
+            name: c.name,
+            employees_active: c.employees_active,
+            compliance_expired: c.compliance_expired,
+            compliance_expiring_30d: c.compliance_expiring_30d,
+          })),
+        },
+      };
+    }
+
+    // Saradnik — stroga dodela vs vidljivo preko poseta.
     if (value.count === 0) {
       return {
         ok: true,
         data: {
           status: "empty",
-          scope: value.scope,
+          audience: "agency_collaborator",
           count: 0,
           assigned_count: 0,
           visit_only_count: 0,
-          searched_for: parsed.data.client_name,
-          hint:
-            parsed.data.client_name?.trim()
-              ? "Nijedan klijent u opsegu ne odgovara tom nazivu."
-              : "Nema klijenata u opsegu korisnika.",
+          searched_for: searched,
+          hint: searched?.trim()
+            ? "Nijedan tvoj vidljivi klijent ne odgovara tom nazivu."
+            : "Nemaš dodeljenih ni preko poseta vidljivih klijenata.",
         },
       };
     }
@@ -78,12 +121,16 @@ export const getMyAssignedClients: AgentTool = {
       ok: true,
       data: {
         status: "ok",
-        scope: value.scope,
+        audience: "agency_collaborator",
         count: value.count,
         assigned_count: value.assigned_count,
         visit_only_count: value.visit_only_count,
         truncated: value.truncated,
-        hint: value.hint,
+        searched_for: searched,
+        hint:
+          value.visit_only_count > 0
+            ? "Za „zadužen” koristi assigned_count (stroga dodela). Ako je relevantno, dodaj da još visit_only_count klijenata vidiš preko poseta — ne mešaj ta dva broja. Ne koristi reč „opseg” u odgovoru korisniku."
+            : "Za „zadužen” / „moji klijenti” koristi assigned_count. Ne koristi reč „opseg” u odgovoru korisniku.",
         clients: value.clients.map((c) => ({
           name: c.name,
           is_assigned: c.is_assigned,

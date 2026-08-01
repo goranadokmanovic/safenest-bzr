@@ -29,6 +29,22 @@ function text(value: unknown): string {
   return String(value);
 }
 
+/** Konzistentno sa evidencijom radnika („N radnika u evidenciji”). */
+function workersLabel(count: unknown): string {
+  const n = typeof count === "number" ? count : Number(count);
+  if (!Number.isFinite(n)) return "— radnika";
+  return n === 1 ? "1 radnik" : `${n} radnika`;
+}
+
+/** Konzistentno sa statusom „Istekao” na stranici Rokovi. */
+function expiredDeadlinesLabel(count: unknown): string {
+  const n = typeof count === "number" ? count : Number(count);
+  if (!Number.isFinite(n) || n <= 0) return "";
+  if (n === 1) return "1 istekao rok";
+  if (n >= 2 && n <= 4) return `${n} istekla roka`;
+  return `${n} isteklih rokova`;
+}
+
 function formatDateOnly(value: unknown): string {
   const raw = typeof value === "string" ? value.slice(0, 10) : "";
   if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return text(value);
@@ -58,7 +74,7 @@ function Shell({
 }) {
   return (
     <div className="mt-3 rounded-lg border border-border/40 bg-surface/60 p-3">
-      <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-ink/55">
+      <p className="bzr-eyebrow !text-[0.65rem] !tracking-[0.12em] text-accent/80">
         {label}
       </p>
       <div className="mt-2 text-sm text-ink/85">{children}</div>
@@ -197,32 +213,38 @@ function VisitSearchList({ data }: { data: Row }) {
 
 function AssignedClientsList({ data }: { data: Row }) {
   const rows = asRows(data.clients);
+  /** Alat vraća audience — vlasnik ne vidi Zadužen/opseg red. */
+  const isOwnerAudience =
+    data.audience === "agency_owner" ||
+    (data.client_count !== undefined && data.assigned_count === undefined);
 
   return (
     <div className="space-y-2 text-xs">
-      <p>
-        <span className="text-ink/60">Zadužen: </span>
-        <span className="font-semibold text-ink">
-          {text(data.assigned_count)}
-        </span>
-        <span className="mx-2 text-ink/40">·</span>
-        <span className="text-ink/60">U opsegu: </span>
-        <span className="font-semibold text-ink">{text(data.count)}</span>
-      </p>
+      {isOwnerAudience ? null : (
+        <p>
+          <span className="text-ink/60">Zadužen: </span>
+          <span className="font-semibold text-ink">
+            {text(data.assigned_count)}
+          </span>
+          <span className="mx-2 text-ink/40">·</span>
+          <span className="text-ink/60">U opsegu: </span>
+          <span className="font-semibold text-ink">{text(data.count)}</span>
+        </p>
+      )}
       {rows.length > 0 ? (
         <ul className="space-y-1">
           {rows.map((row, i) => (
             <li key={i} className="flex justify-between gap-3">
               <span>
                 {text(row.name)}
-                {row.is_assigned === true ? (
+                {!isOwnerAudience && row.is_assigned === true ? (
                   <span className="ml-1.5 text-ink/45">(dodeljen)</span>
                 ) : null}
               </span>
               <span className="shrink-0 text-ink/60">
-                {text(row.employees_active)} radn.
+                {workersLabel(row.employees_active)}
                 {(row.compliance_expired as number) > 0
-                  ? ` · ${text(row.compliance_expired)} isteklo`
+                  ? ` · ${expiredDeadlinesLabel(row.compliance_expired)}`
                   : ""}
               </span>
             </li>

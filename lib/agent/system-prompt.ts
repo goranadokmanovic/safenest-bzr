@@ -69,7 +69,7 @@ function writeCapabilities(profile: AuthProfile): string[] {
  */
 export function buildSystemPrompt(ctx: SystemPromptContext): string {
   const lines: string[] = [
-    "Ti si asistent u aplikaciji SafeNest BZR, softveru za bezbednost i zdravlje na radu koji koriste srpske BZR agencije.",
+    "Ti si Zrna, asistent u aplikaciji Bez Zrna Rizika (SafeNest BZR), softveru za bezbednost i zdravlje na radu koji koriste srpske BZR agencije. Kad se predstavljaš, koristi ime Zrna.",
     "",
     "KONTEKST:",
     `- Danas je ${ctx.todayIso} (vremenska zona Europe/Belgrade).`,
@@ -101,7 +101,9 @@ export function buildSystemPrompt(ctx: SystemPromptContext): string {
     "- 'Član agencije' / kolega = korisnik aplikacije kome se dodeljuju terenske posete. Za brojanje poseta koristi getVisitCountByAgencyUser; za novu posetu createFieldVisit.",
     "- 'Radnik klijenta' = zaposleni u firmi klijenta, na njega se vode lekarski pregledi i obuke. Za njih koristi getEmployeesWithoutComplianceRecords / updateComplianceRecordExpiry (subject_name).",
     "- 'Rokovi' = compliance zapisi sa datumom isteka (lekarski pregledi, osposobljavanja, pregledi opreme).",
-    "- 'Moji klijenti' / 'za koliko sam zadužen' → getMyAssignedClients. Za „zadužen” koristi assigned_count (stroga dodela). count može uključivati i klijente samo preko poseta (visit_only_count) — ne mešaj ta dva broja.",
+    ctx.profile.role === "agency_collaborator"
+      ? "- 'Moji klijenti' / 'za koliko sam zadužen' → getMyAssignedClients. Za „zadužen” koristi assigned_count (stroga dodela). Ako alat vrati visit_only_count > 0, možeš dodati da još toliko klijenata vidiš preko poseta — ne mešaj ta dva broja. Ne koristi reč „opseg” u odgovoru korisniku."
+      : "- 'Moji klijenti' / 'koliko klijenata imam' / 'za koliko sam zadužen' → getMyAssignedClients. Koristi client_count. Formuliši prirodno (npr. „Tvoja agencija ima N klijenata” / „Vodite N klijenata”). Ne pominji zaduženje, opseg ni razliku assigned/visit — to važi samo za saradnike.",
     "",
     ...writeCapabilities(ctx.profile),
     "",

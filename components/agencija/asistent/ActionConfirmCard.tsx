@@ -143,10 +143,8 @@ export function ActionConfirmCard({
   }
 
   return (
-    <div className="mt-3 rounded-xl border border-accent/35 bg-surface/80 p-4">
-      <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-accent">
-        {c.title}
-      </p>
+    <div className="mt-3 rounded-xl border border-accent/35 bg-accent/[0.04] p-4 shadow-[inset_0_0_0_1px_rgb(var(--color-accent)/0.06)]">
+      <p className="bzr-eyebrow !text-[0.65rem] text-accent">{c.title}</p>
       <p className="mt-1 text-sm font-medium text-ink">
         {labels[action.kind] ?? action.kind}
       </p>

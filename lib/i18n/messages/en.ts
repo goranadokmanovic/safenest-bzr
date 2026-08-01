@@ -287,7 +287,6 @@ export const en: Messages = {
       clients: "Clients",
       fieldVisits: "Field Visits",
       search: "Smart search",
-      assistant: "AI assistant",
       reportTemplates: "Report templates",
       invites: "Invites",
       team: "Agency staff",
@@ -707,14 +706,13 @@ export const en: Messages = {
       allRiskLevels: "All risk levels",
     },
     assistant: {
-      title: "AI assistant",
-      intro:
-        "Ask about clients, deadlines and visits. The assistant reads data you can already see, and proposes changes — you confirm them with a button.",
-      inputLabel: "Question for the assistant",
+      title: "Zrna",
+      intro: "Ask Zrna about anything that matters in your BZR work.",
+      inputLabel: "Question for Zrna",
       inputPlaceholder: "E.g. which deadlines expire in the next 30 days?",
       send: "Send",
       sending: "Sending…",
-      thinking: "The assistant is thinking…",
+      thinking: "Zrna is thinking…",
       emptyTitle: "Ask your first question",
       emptyHint: "Here are a few examples to start with:",
       suggestions: [
@@ -727,12 +725,18 @@ export const en: Messages = {
       toolFailed: "Tool failed",
       newChat: "New chat",
       disclaimer:
-        "The assistant can make mistakes. Write actions are not applied until you press Confirm.",
+        "Zrna can make mistakes. Write actions are not applied until you press Confirm.",
       roleYou: "You",
-      roleAssistant: "Assistant",
+      roleAssistant: "Zrna",
       historyTrimmed:
-        "This conversation is long — older messages are no longer sent to the assistant.",
+        "This conversation is long — older messages are no longer sent to Zrna.",
       pendingProposal: "Proposal awaiting confirmation",
+      openChat: "Open Zrna",
+      closeChat: "Close Zrna",
+      expandChat: "Expand Zrna",
+      collapseChat: "Collapse Zrna",
+      fabTooltip:
+        "Zrna is your AI assistant. Ask about clients, deadlines and visits, or tell her to schedule a visit or update a deadline.",
       toolLabels: {
         getVisitCountByAgencyUser: "Visit count per agency member",
         getUpcomingDeadlines: "Upcoming deadlines",

@@ -2,11 +2,17 @@
 
 import { useRouter } from "next/navigation";
 import { createBrowserSupabaseClient } from "@/lib/supabase/client";
+import {
+  clearZrnaPanelChat,
+  setZrnaPanelOpen,
+} from "@/lib/agent/zrna-panel-chat-store";
 
 export function LogoutButton() {
   const router = useRouter();
 
   async function handleLogout() {
+    clearZrnaPanelChat();
+    setZrnaPanelOpen(false);
     try {
       const supabase = createBrowserSupabaseClient();
       await supabase.auth.signOut();

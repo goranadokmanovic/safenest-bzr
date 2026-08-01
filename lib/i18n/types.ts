@@ -266,7 +266,6 @@ export type Messages = {
       clients: string;
       fieldVisits: string;
       search: string;
-      assistant: string;
       reportTemplates: string;
       invites: string;
       team: string;
@@ -671,6 +670,11 @@ export type Messages = {
       roleAssistant: string;
       historyTrimmed: string;
       pendingProposal: string;
+      openChat: string;
+      closeChat: string;
+      expandChat: string;
+      collapseChat: string;
+      fabTooltip: string;
       toolLabels: {
         getVisitCountByAgencyUser: string;
         getUpcomingDeadlines: string;

@@ -42,7 +42,7 @@ SaaS za agencije BZR (bezbednost i zdravlje na radu): klijenti, zaposleni, rokov
 
 
 
-## Status po fazama (stanje: jul 2026, ažurirano 2026-07-30 — klijenti detalj, radnici, rokovi/JMBG/uvoz)
+## Status po fazama (stanje: avg 2026, ažurirano 2026-08-01 — Zrna panel UX, fuzzy imena, owner copy)
 
 
 
@@ -1366,6 +1366,61 @@ odgovarao da nema pristup — iako je opseg već u `clientIdsInScope`.
 | Dedupe | `field-visit-assigned-{visitId}`; ne šalje se kreatoru (self-assign) |
 | Tekst | `Dodeljena ti je nova poseta: {klijent}, {datum} u {vreme}.` |
 
-*Poslednje ažuriranje: 2026-08-01 (posete: predstojeće + notifikacija).*
+## Changelog 2026-08-01 — Zrna ime + plutajući chat
+
+| Stavka | Detalj |
+|--------|--------|
+| Ime | UI i system prompt koriste **Zrna** (nav, naslov, „Zrna razmišlja…”) |
+| FAB | `ZrnaFloatingChat` u `AgencyShell` — donji desni ugao |
+| Panel | Bez full-page scrim-a; copy sa stranice ispod radi; Escape / klik van panela zatvara |
+| Ruta | `/agencija/asistent` ostaje; FAB se na njoj ne prikazuje |
+
+**Dopuna:** nav link „Zrna” uklonjen iz sidebara (ostaje samo FAB + ruta za
+bookmark). FAB ima stilizovani tooltip (`components/ui/Tooltip.tsx`).
+
+## Changelog 2026-08-01 — Zrna vizuelni identitet, panel UX, fuzzy imena, owner copy
+
+### Vizuelni identitet
+| Stavka | Detalj |
+|--------|--------|
+| FAB | Štit PNG (`ZrnaShield` → `/zrna-shield.png`), oblik dugmeta = štit, ~104px, žuti glow |
+| Cutout | `scripts/cutout-stit.mjs` / `cutout-robot.mjs` — Canva PNG ima tamnu ploču; cutout za pravi alpha |
+| Robot | `ZrnaRobot` → `/zrna-robot.png`; pri otvorenom panelu viri levo (ispred panela), sakriven u expand modu |
+| Header | Bez štita/avatar u headeru panela; naslov „Zrna” 24px bold |
+| Intro | „Pitaj Zrnu o svemu što te zanima u BZR poslovanju.” |
+| Empty state | Bez ikone pored „Postavi prvo pitanje” |
+| `ZrnaMark` | SVG ostaje u kodu, neiskorišćen (rollback opcija) |
+
+### Panel UX (perzistencija + veličina)
+| Stavka | Detalj |
+|--------|--------|
+| Chat store | `lib/agent/zrna-panel-chat-store.ts` — entries/input/error preživljavaju close i navigaciju |
+| Open store | `open` u istom store-u — preživljava AgencyShell remount |
+| Outside-click | Ne zatvara na `a[href]`, `[role="link"]`, `[role="tab"]` (navigacija ne gasi panel) |
+| Reset | Samo „Novi razgovor” ili Odjava (`clearZrnaPanelChat` + `setZrnaPanelOpen(false)`) |
+| Visina | Fiksno `h-[min(85vh,48.75rem)]` (~780px) |
+| Expand | Toggle u headeru → skoro-fullscreen `fixed inset-3/4`; ESC zatvara sve; robot sakriven |
+
+### Fuzzy subject_name (compliance)
+| Stavka | Detalj |
+|--------|--------|
+| Util | `lib/shared/name-match.ts` — dijakritika + redosled tokena („Ana Jovanović” ≡ „Jovanovic Ana”) |
+| Lookup | `lookupComplianceRecords` koristi `personNameMatches` |
+| Resolve | `resolveComplianceRecordArg` opušta category/record_type filter ako nema pogodaka |
+
+### Owner vs saradnik — „moji klijenti”
+| Stavka | Detalj |
+|--------|--------|
+| Alat | `getMyAssignedClients` — `audience: agency_owner` → `client_count` + prirodan hint; saradnik zadržava assigned/visit |
+| Prompt | Role-uslovna formulacija (bez „opseg” za ownera) |
+| ToolTraceCard | Owner: bez reda „Zadužen/U opsegu”; pune reči „N radnika” / „N istekao rok” |
+
+### Fajlovi (ključni)
+- `components/agencija/asistent/ZrnaFloatingChat.tsx`
+- `components/brand/ZrnaShield.tsx`, `ZrnaRobot.tsx`, `ZrnaMark.tsx`
+- `lib/agent/zrna-panel-chat-store.ts`, `lib/shared/name-match.ts`
+- `public/zrna-shield.png`, `public/zrna-robot.png`
+
+*Poslednje ažuriranje: 2026-08-01 (Zrna shield/robot FAB, panel persist+expand, fuzzy imena, owner copy).*
 
 

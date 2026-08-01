@@ -287,7 +287,6 @@ export const sr: Messages = {
       clients: "Klijenti",
       fieldVisits: "Terenske posete",
       search: "Pametna pretraga",
-      assistant: "AI asistent",
       reportTemplates: "Šabloni zapisnika",
       invites: "Pozivnice",
       team: "Radnici agencije",
@@ -705,14 +704,13 @@ export const sr: Messages = {
       allRiskLevels: "Svi nivoi rizika",
     },
     assistant: {
-      title: "AI asistent",
-      intro:
-        "Pitaj o klijentima, rokovima i posetama. Asistent čita podatke koje vidiš u aplikaciji, a izmene predlaže — ti ih potvrđuješ dugmetom.",
-      inputLabel: "Pitanje za asistenta",
+      title: "Zrna",
+      intro: "Pitaj Zrnu o svemu što te zanima u BZR poslovanju.",
+      inputLabel: "Pitanje za Zrnu",
       inputPlaceholder: "Npr. koji rokovi ističu u narednih 30 dana?",
       send: "Pošalji",
       sending: "Šaljem…",
-      thinking: "Asistent razmišlja…",
+      thinking: "Zrna razmišlja…",
       emptyTitle: "Postavi prvo pitanje",
       emptyHint: "Evo nekoliko primera od kojih možeš da počneš:",
       suggestions: [
@@ -725,12 +723,18 @@ export const sr: Messages = {
       toolFailed: "Alat nije uspeo",
       newChat: "Novi razgovor",
       disclaimer:
-        "Asistent može da pogreši. Write akcije se ne izvršavaju dok ne klikneš Potvrdi.",
+        "Zrna može da pogreši. Write akcije se ne izvršavaju dok ne klikneš Potvrdi.",
       roleYou: "Ti",
-      roleAssistant: "Asistent",
+      roleAssistant: "Zrna",
       historyTrimmed:
-        "Razgovor je dugačak — starije poruke se više ne šalju asistentu.",
+        "Razgovor je dugačak — starije poruke se više ne šalju Zrni.",
       pendingProposal: "Predlog čeka potvrdu",
+      openChat: "Otvori Zrnu",
+      closeChat: "Zatvori Zrnu",
+      expandChat: "Proširi Zrnu",
+      collapseChat: "Smanji Zrnu",
+      fabTooltip:
+        "Zrna je tvoj AI asistent. Pitaj je o klijentima, rokovima i posetama, ili joj reci da zakaže posetu ili izmeni rok.",
       toolLabels: {
         getVisitCountByAgencyUser: "Broj poseta po članu agencije",
         getUpcomingDeadlines: "Rokovi koji ističu",

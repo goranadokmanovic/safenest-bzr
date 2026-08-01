@@ -23,6 +23,7 @@ import {
 import { clientOutOfScopeReply } from "@/lib/agent/fixed-replies";
 import type { ComplianceRecordType } from "@/lib/compliance/types";
 import type { ToolContext, ToolOutcome } from "@/lib/agent/types";
+import { foldPersonName } from "@/lib/shared/name-match";
 
 export type ClientArg =
   | { kind: "all" }
@@ -240,19 +241,42 @@ export async function resolveComplianceRecordArg(
     recordType?: ComplianceRecordType | null;
   },
 ): Promise<ComplianceRecordArg> {
-  const lookup = await lookupComplianceRecords(ctx.supabase, {
-    agencyId: ctx.agencyId,
-    clientCompanyId: client.id,
-    subjectName: input.subjectName,
-    category: input.category,
-    recordType: input.recordType,
-  });
-
-  if (!lookup.ok) {
-    return { kind: "halt", outcome: { ok: false, error: lookup.message } };
+  /**
+   * Postepeno opuštanje filtera: prvo tip+kategorija, pa bez kategorije,
+   * pa samo ime — da pogrešan default modela ne sakrije postojeći zapis.
+   */
+  const attempts: Array<{
+    category?: string | null;
+    recordType?: ComplianceRecordType | null;
+  }> = [
+    { category: input.category, recordType: input.recordType },
+  ];
+  if (input.category) {
+    attempts.push({ category: null, recordType: input.recordType });
+  }
+  if (input.recordType || input.category) {
+    attempts.push({ category: null, recordType: null });
   }
 
-  const matches = lookup.value;
+  let matches: ComplianceRecordMatch[] = [];
+  for (const attempt of attempts) {
+    const lookup = await lookupComplianceRecords(ctx.supabase, {
+      agencyId: ctx.agencyId,
+      clientCompanyId: client.id,
+      subjectName: input.subjectName,
+      category: attempt.category,
+      recordType: attempt.recordType,
+    });
+
+    if (!lookup.ok) {
+      return { kind: "halt", outcome: { ok: false, error: lookup.message } };
+    }
+
+    if (lookup.value.length > 0) {
+      matches = lookup.value;
+      break;
+    }
+  }
 
   if (matches.length === 0) {
     return {
@@ -273,10 +297,10 @@ export async function resolveComplianceRecordArg(
 
   if (matches.length > 1) {
     // Ako je kategorija tačno pogodila jedan, uzmi taj.
-    const categoryNeedle = input.category?.trim().toLowerCase();
+    const categoryNeedle = foldPersonName(input.category ?? "");
     if (categoryNeedle) {
       const exactCat = matches.filter(
-        (m) => m.category.trim().toLowerCase() === categoryNeedle,
+        (m) => foldPersonName(m.category) === categoryNeedle,
       );
       if (exactCat.length === 1) {
         return { kind: "one", record: exactCat[0]! };

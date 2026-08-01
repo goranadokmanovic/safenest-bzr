@@ -11,6 +11,11 @@ import {
   type ComplianceStatusKind,
 } from "@/lib/compliance/types";
 import type { QueryResult } from "@/lib/queries/clients";
+import {
+  foldPersonName,
+  personNameMatches,
+  personNamesEquivalent,
+} from "@/lib/shared/name-match";
 
 export type ComplianceRecordMatch = {
   id: string;
@@ -72,8 +77,8 @@ export async function lookupComplianceRecords(
   supabase: SupabaseClient,
   input: LookupComplianceRecordsInput,
 ): Promise<QueryResult<ComplianceRecordMatch[]>> {
-  const needle = input.subjectName.trim().toLowerCase();
-  if (needle.length < 2) {
+  const needleRaw = input.subjectName.trim();
+  if (foldPersonName(needleRaw).length < 2) {
     return { ok: true, value: [] };
   }
 
@@ -94,20 +99,19 @@ export async function lookupComplianceRecords(
   const { data, error } = await query;
   if (error) return { ok: false, message: error.message };
 
-  const categoryNeedle = input.category?.trim().toLowerCase() ?? "";
+  const categoryNeedle = foldPersonName(input.category ?? "");
 
   const matches: ComplianceRecordMatch[] = [];
   for (const row of data ?? []) {
-    const subject = String(row.subject_name ?? "")
-      .trim()
-      .toLowerCase();
-    if (!subject.includes(needle) && !needle.includes(subject)) continue;
+    const subjectName = String(row.subject_name ?? "");
+    if (!personNameMatches(needleRaw, subjectName)) continue;
 
     const category = String(row.category ?? "");
+    const categoryFolded = foldPersonName(category);
     if (
       categoryNeedle &&
-      !category.toLowerCase().includes(categoryNeedle) &&
-      !categoryNeedle.includes(category.toLowerCase())
+      !categoryFolded.includes(categoryNeedle) &&
+      !categoryNeedle.includes(categoryFolded)
     ) {
       continue;
     }
@@ -124,16 +128,16 @@ export async function lookupComplianceRecords(
       id: row.id as string,
       client_company_id: row.client_company_id as string,
       client_name: clientName,
-      subject_name: String(row.subject_name ?? ""),
+      subject_name: subjectName,
       category,
       record_type: row.record_type as ComplianceRecordType,
       expiry_date: (row.expiry_date as string | null) ?? null,
     });
   }
 
-  // Tačan pogodak imena ima prednost nad contains.
-  const exact = matches.filter(
-    (m) => m.subject_name.trim().toLowerCase() === needle,
+  // Ekvivalentno ime (redosled/dijakritika) ima prednost nad delimičnim tokenima.
+  const exact = matches.filter((m) =>
+    personNamesEquivalent(m.subject_name, needleRaw),
   );
   return { ok: true, value: exact.length > 0 ? exact : matches };
 }

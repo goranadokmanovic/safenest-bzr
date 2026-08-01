@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { AppShell } from "@/components/layout/AppShell";
 import { useTranslations } from "@/components/i18n/locale-provider";
+import { ZrnaFloatingChat } from "@/components/agencija/asistent/ZrnaFloatingChat";
 
 export function AgencyShell({
   canManageTemplates = false,
@@ -18,7 +19,6 @@ export function AgencyShell({
     { href: "/agencija/klijenti", label: m.agencija.nav.clients },
     { href: "/agencija/field-visits", label: m.agencija.nav.fieldVisits },
     { href: "/agencija/pretraga", label: m.agencija.nav.search },
-    { href: "/agencija/asistent", label: m.agencija.nav.assistant },
     ...(canManageTemplates
       ? [
           {
@@ -40,6 +40,7 @@ export function AgencyShell({
       footerLinks={[{ href: "/", label: "Početna" }]}
     >
       {children}
+      <ZrnaFloatingChat />
     </AppShell>
   );
 }

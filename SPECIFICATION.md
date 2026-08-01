@@ -527,8 +527,10 @@ Offline-first rad je izveden preko IndexedDB-a (localforage) i outbox reda u
 
 ### 13.2 AI asistent
 
-Chat na `/agencija/asistent` odgovara na pitanja o podacima preko OpenAI
-function calling-a (`POST /api/assistant/chat`, jezgro u `lib/agent/*`).
+Asistent se zove **Zrna**. Dostupan je na `/agencija/asistent` i kao plutajući
+panel (FAB) na svim stranicama unutar `AgencyShell` (bez scrim-a — copy sa
+stranice ispod radi). Chat ide preko OpenAI function calling-a
+(`POST /api/assistant/chat`, jezgro u `lib/agent/*`).
 
 **Faza A — čitanje** (izvršava se odmah):
 

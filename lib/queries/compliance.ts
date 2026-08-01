@@ -12,6 +12,24 @@ import {
 } from "@/lib/compliance/types";
 import type { QueryResult } from "@/lib/queries/clients";
 
+export type ComplianceRecordMatch = {
+  id: string;
+  client_company_id: string;
+  client_name: string | null;
+  subject_name: string;
+  category: string;
+  record_type: ComplianceRecordType;
+  expiry_date: string | null;
+};
+
+export type LookupComplianceRecordsInput = {
+  agencyId: string;
+  clientCompanyId: string;
+  subjectName: string;
+  category?: string | null;
+  recordType?: ComplianceRecordType | null;
+};
+
 export type UpcomingDeadline = {
   record_id: string;
   client_company_id: string;
@@ -44,6 +62,80 @@ function addDaysIso(isoDate: string, days: number): string {
   const [y, m, d] = isoDate.split("-").map(Number);
   const base = Date.UTC(y!, (m ?? 1) - 1, d ?? 1);
   return new Date(base + days * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/**
+ * Traži compliance zapise jednog klijenta po imenu subjekta (+ opciono
+ * kategorija / tip). Vraća kandidate za razrešavanje u AI alatu — bez upisa.
+ */
+export async function lookupComplianceRecords(
+  supabase: SupabaseClient,
+  input: LookupComplianceRecordsInput,
+): Promise<QueryResult<ComplianceRecordMatch[]>> {
+  const needle = input.subjectName.trim().toLowerCase();
+  if (needle.length < 2) {
+    return { ok: true, value: [] };
+  }
+
+  let query = supabase
+    .from("compliance_records")
+    .select(
+      "id, client_company_id, record_type, category, subject_name, expiry_date, client_companies ( name )",
+    )
+    .eq("agency_id", input.agencyId)
+    .eq("client_company_id", input.clientCompanyId)
+    .order("expiry_date", { ascending: false })
+    .limit(200);
+
+  if (input.recordType) {
+    query = query.eq("record_type", input.recordType);
+  }
+
+  const { data, error } = await query;
+  if (error) return { ok: false, message: error.message };
+
+  const categoryNeedle = input.category?.trim().toLowerCase() ?? "";
+
+  const matches: ComplianceRecordMatch[] = [];
+  for (const row of data ?? []) {
+    const subject = String(row.subject_name ?? "")
+      .trim()
+      .toLowerCase();
+    if (!subject.includes(needle) && !needle.includes(subject)) continue;
+
+    const category = String(row.category ?? "");
+    if (
+      categoryNeedle &&
+      !category.toLowerCase().includes(categoryNeedle) &&
+      !categoryNeedle.includes(category.toLowerCase())
+    ) {
+      continue;
+    }
+
+    const cc = row.client_companies as
+      | { name?: string }
+      | { name?: string }[]
+      | null;
+    const clientName = Array.isArray(cc)
+      ? (cc[0]?.name ?? null)
+      : (cc?.name ?? null);
+
+    matches.push({
+      id: row.id as string,
+      client_company_id: row.client_company_id as string,
+      client_name: clientName,
+      subject_name: String(row.subject_name ?? ""),
+      category,
+      record_type: row.record_type as ComplianceRecordType,
+      expiry_date: (row.expiry_date as string | null) ?? null,
+    });
+  }
+
+  // Tačan pogodak imena ima prednost nad contains.
+  const exact = matches.filter(
+    (m) => m.subject_name.trim().toLowerCase() === needle,
+  );
+  return { ok: true, value: exact.length > 0 ? exact : matches };
 }
 
 /** Rokovi koji ističu u narednih N dana (opciono i već istekli). */

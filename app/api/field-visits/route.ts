@@ -16,6 +16,7 @@ import {
   parseFieldVisitListFilters,
 } from "@/lib/field-visits/list";
 import { getDelegatedFromUserIds } from "@/lib/field-visits/control-visits";
+import { notifyFieldVisitAssigned } from "@/lib/field-visits/notify-assigned";
 
 export const GET = withApiCatch(async (request: Request) => {
   const auth = await getAuthContext();
@@ -148,6 +149,25 @@ export const POST = withApiCatch(async (request: Request) => {
   if (audit.error) {
     console.error("[field-visits] audit log failed", audit.error);
   }
+
+  // Ime klijenta nije u ClientScopeRow — kratki lookup za tekst notifikacije.
+  let clientName = "";
+  const { data: clientRow } = await supabase
+    .from("client_companies")
+    .select("name")
+    .eq("id", parsed.data.client_company_id)
+    .maybeSingle();
+  clientName = (clientRow?.name as string | undefined)?.trim() ?? "";
+
+  await notifyFieldVisitAssigned({
+    agencyId: client.agency_id,
+    visitId: data.id as string,
+    assignedUserId: (data.assigned_user_id as string | null) ?? row.assigned_user_id,
+    actorUserId: user.id,
+    clientCompanyId: parsed.data.client_company_id,
+    clientName,
+    scheduledAt: (data.scheduled_at as string | null) ?? row.scheduled_at,
+  });
 
   return jsonOk({ field_visit: data }, 201);
 });

@@ -11,6 +11,7 @@ import { RiskBadge } from "@/components/field-visits/RiskBadge";
 import { BrandDecor } from "@/components/brand/BrandDecor";
 import {
   ReportLockBadge,
+  ScheduledBadge,
   SyncStatusBadge,
   VisitStatusBadge,
 } from "@/components/field-visits/VisitStatusBadges";
@@ -24,9 +25,11 @@ import {
   normalizeSyncStatus,
   normalizeVisitStatus,
 } from "@/lib/field-visits/display";
-import type {
-  AgencyWorkerOption,
-  FieldVisitListScope,
+import {
+  isUpcomingFieldVisit,
+  type AgencyWorkerOption,
+  type FieldVisitListScope,
+  type FieldVisitListTime,
 } from "@/lib/field-visits/list";
 
 import type {
@@ -125,10 +128,12 @@ async function deleteLocalVisit(localId: string): Promise<void> {
 
 function buildListQuery(
   scope: FieldVisitListScope,
+  time: FieldVisitListTime,
   filters: FilterDraft,
 ): string {
   const params = new URLSearchParams();
   params.set("scope", scope);
+  params.set("time", time);
   if (scope === "all") {
     if (filters.clientName.trim()) {
       params.set("client_name", filters.clientName.trim());
@@ -179,6 +184,7 @@ export function FieldVisitsList({
   const fv = m.dashboard.fieldVisits;
 
   const [scope, setScope] = useState<FieldVisitListScope>("mine");
+  const [time, setTime] = useState<FieldVisitListTime>("upcoming");
   const [filterDraft, setFilterDraft] = useState<FilterDraft>(EMPTY_FILTERS);
   const [appliedFilters, setAppliedFilters] =
     useState<FilterDraft>(EMPTY_FILTERS);
@@ -197,11 +203,15 @@ export function FieldVisitsList({
   }, [initialServerRows]);
 
   const fetchList = useCallback(
-    async (nextScope: FieldVisitListScope, filters: FilterDraft) => {
+    async (
+      nextScope: FieldVisitListScope,
+      nextTime: FieldVisitListTime,
+      filters: FilterDraft,
+    ) => {
       setListLoading(true);
       setListError(null);
       try {
-        const qs = buildListQuery(nextScope, filters);
+        const qs = buildListQuery(nextScope, nextTime, filters);
         const res = await fetch(`/api/field-visits?${qs}`);
         const json = (await res.json().catch(() => ({}))) as {
           error?: string;
@@ -227,21 +237,28 @@ export function FieldVisitsList({
     if (next === "mine") {
       setFilterDraft(EMPTY_FILTERS);
       setAppliedFilters(EMPTY_FILTERS);
-      await fetchList("mine", EMPTY_FILTERS);
+      await fetchList("mine", time, EMPTY_FILTERS);
     } else {
-      await fetchList("all", appliedFilters);
+      await fetchList("all", time, appliedFilters);
     }
+  }
+
+  async function switchTime(next: FieldVisitListTime) {
+    if (next === time) return;
+    setTime(next);
+    const filters = scope === "mine" ? EMPTY_FILTERS : appliedFilters;
+    await fetchList(scope, next, filters);
   }
 
   async function applyFilters() {
     setAppliedFilters(filterDraft);
-    await fetchList("all", filterDraft);
+    await fetchList("all", time, filterDraft);
   }
 
   async function resetFilters() {
     setFilterDraft(EMPTY_FILTERS);
     setAppliedFilters(EMPTY_FILTERS);
-    await fetchList("all", EMPTY_FILTERS);
+    await fetchList("all", time, EMPTY_FILTERS);
   }
 
   const loadLocal = useCallback(async () => {
@@ -314,6 +331,7 @@ export function FieldVisitsList({
   }, [loadLocal, serverRows]);
 
   const rows = useMemo(() => {
+    const nowMs = Date.now();
     const localForScope =
       scope === "mine"
         ? localRows.filter(
@@ -322,16 +340,23 @@ export function FieldVisitsList({
           )
         : localRows;
 
+    const localForTime = localForScope.filter((r) => {
+      const upcoming = isUpcomingFieldVisit(r.scheduled_at, r.status, nowMs);
+      return time === "upcoming" ? upcoming : !upcoming;
+    });
+
     const server: FieldVisitDisplayRow[] = serverRows.map((r) => ({
       ...r,
       isLocal: false,
     }));
-    return [...localForScope, ...server].sort(
-      (a, b) =>
-        new Date(b.scheduled_at).getTime() -
-        new Date(a.scheduled_at).getTime(),
-    );
-  }, [serverRows, localRows, scope, currentUserId]);
+    const merged = [...localForTime, ...server];
+    merged.sort((a, b) => {
+      const diff =
+        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime();
+      return time === "upcoming" ? diff : -diff;
+    });
+    return merged;
+  }, [serverRows, localRows, scope, time, currentUserId]);
 
   async function confirmDelete(row: FieldVisitDisplayRow) {
     setLoading(true);
@@ -351,7 +376,7 @@ export function FieldVisitsList({
           setError(json.error ?? m.common.error);
           return;
         }
-        await fetchList(scope, appliedFilters);
+        await fetchList(scope, time, appliedFilters);
         router.refresh();
       }
       setViewRow(null);
@@ -366,29 +391,55 @@ export function FieldVisitsList({
 
   return (
     <>
-      <div
-        className="bzr-tabs bzr-tabs-premium mt-7"
-        role="tablist"
-        aria-label={fv.tabsAriaLabel}
-      >
-        <button
-          type="button"
-          role="tab"
-          aria-selected={scope === "mine"}
-          onClick={() => void switchScope("mine")}
-          className="bzr-tab bzr-tab-premium"
+      <div className="mt-7 flex flex-col gap-3">
+        <div
+          className="bzr-tabs bzr-tabs-premium"
+          role="tablist"
+          aria-label={fv.tabsAriaLabel}
         >
-          {fv.tabMine}
-        </button>
-        <button
-          type="button"
-          role="tab"
-          aria-selected={scope === "all"}
-          onClick={() => void switchScope("all")}
-          className="bzr-tab bzr-tab-premium"
+          <button
+            type="button"
+            role="tab"
+            aria-selected={scope === "mine"}
+            onClick={() => void switchScope("mine")}
+            className="bzr-tab bzr-tab-premium"
+          >
+            {fv.tabMine}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={scope === "all"}
+            onClick={() => void switchScope("all")}
+            className="bzr-tab bzr-tab-premium"
+          >
+            {fv.tabAll}
+          </button>
+        </div>
+        <div
+          className="bzr-tabs bzr-tabs-premium"
+          role="tablist"
+          aria-label={fv.tabsTimeAriaLabel}
         >
-          {fv.tabAll}
-        </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={time === "upcoming"}
+            onClick={() => void switchTime("upcoming")}
+            className="bzr-tab bzr-tab-premium"
+          >
+            {fv.tabUpcoming}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            aria-selected={time === "history"}
+            onClick={() => void switchTime("history")}
+            className="bzr-tab bzr-tab-premium"
+          >
+            {fv.tabHistory}
+          </button>
+        </div>
       </div>
 
       {scope === "all" ? (
@@ -622,7 +673,11 @@ export function FieldVisitsList({
             className="mb-4 !opacity-85"
           />
           <p className="relative text-lg font-semibold text-ink">
-            {scope === "mine" ? fv.noVisitsMine : fv.noVisitsFiltered}
+            {scope === "mine"
+              ? time === "upcoming"
+                ? fv.noVisitsMineUpcoming
+                : fv.noVisitsMine
+              : fv.noVisitsFiltered}
           </p>
           <p className="relative mt-2 max-w-sm text-base text-ink/55">
             Kreiraj novu terensku posetu ili promeni filtere.
@@ -726,7 +781,12 @@ export function FieldVisitsList({
                       )}
                     </td>
                     <td className="text-xs leading-snug text-ink/75">
-                      {formatVisitDate(row.scheduled_at, locale)}
+                      <span className="inline-flex flex-col items-start gap-1">
+                        {formatVisitDate(row.scheduled_at, locale)}
+                        {isUpcomingFieldVisit(row.scheduled_at, row.status) ? (
+                          <ScheduledBadge />
+                        ) : null}
+                      </span>
                     </td>
                     <td className="tabular-nums text-ink/80">
                       {formatDurationHours(meta, fv.hoursSuffix, {

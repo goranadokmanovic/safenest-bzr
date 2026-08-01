@@ -508,7 +508,7 @@ safenest-bzr/
 | Rokovi CRUD, obaveštenja create/read-all | Specifikovano, **delimično** implementirano |
 | Terenske posete + offline-first sync | Specifikovano i implementirano |
 | AI asistent — Faza A (alati za čitanje) | Specifikovano i implementirano |
-| AI asistent — Faza B (write akcije uz potvrdu) | Sledeći planirani korak |
+| AI asistent — Faza B (write akcije uz potvrdu) | Specifikovano i implementirano |
 | i18n (sr/en) | **Delimično** implementirano |
 | Deploy | Pripremljeno za Vercel (cron + env), bez potvrde produkcije |
 | Klijentski portal (UI za `client_user`) | Van opsega / kasnije |
@@ -529,7 +529,8 @@ Offline-first rad je izveden preko IndexedDB-a (localforage) i outbox reda u
 
 Chat na `/agencija/asistent` odgovara na pitanja o podacima preko OpenAI
 function calling-a (`POST /api/assistant/chat`, jezgro u `lib/agent/*`).
-Registrovano je pet alata, svi **samo za čitanje**:
+
+**Faza A — čitanje** (izvršava se odmah):
 
 | Alat | Šta vraća |
 |------|-----------|
@@ -537,13 +538,20 @@ Registrovano je pet alata, svi **samo za čitanje**:
 | `getUpcomingDeadlines` | Rokovi koji ističu u narednih N dana |
 | `getEmployeesWithoutComplianceRecords` | Zaposleni bez compliance zapisa |
 | `getClientSummary` | Pregled klijenta (zaposleni, posete, rokovi) |
+| `getMyAssignedClients` | Lista/broj klijenata u opsegu (`assigned_count` = stroga dodela) |
 | `searchFieldVisits` | Postojeća RAG pretraga terenskih poseta |
 
-Alati nikad ne grade SQL niti primaju `agency_id` kroz argumente — svaki radi
-kroz Supabase klijent sesije korisnika, pa nasleđuje RLS i opseg saradnika.
+**Faza B — write predlozi** (server ne upisuje; UI potvrđuje pa zove postojeću rutu):
 
-**Faza B** je sledeći planirani korak: write akcije (kreiranje posete, pomeranje
-roka, dodela saradnika klijentu) koje agent samo *predlaže*, a korisnik mora
-eksplicitno da potvrdi pre izvršenja.
+| Alat | Ko sme | Posle potvrde |
+|------|--------|---------------|
+| `createFieldVisit` | owner, collaborator, field_worker | `POST /api/field-visits` |
+| `updateComplianceRecordExpiry` | owner, collaborator | `PATCH /api/compliance-records/[id]` |
+| `assignCollaboratorToClient` | samo owner | `PATCH /api/clients/[id]` |
+
+Odgovor chata može da sadrži `pending_action`; `ActionConfirmCard` prikazuje
+parametre i dugmad Potvrdi/Otkaži. Nova poruka u chatu otkazuje nepotvrđen
+predlog. Alati nikad ne grade SQL niti primaju `agency_id` kroz argumente —
+rade kroz Supabase klijent sesije, pa nasleđuju RLS i opseg saradnika.
 
 Za ažuran žurnal razvoja: [`PLAN.md`](PLAN.md).

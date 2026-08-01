@@ -1317,6 +1317,55 @@ SECURITY DEFINER funkcija mora da ide kroz migraciju i da eksplicitno izvodi
 opseg iz `auth.uid()`, a ne iz argumenta koji zadaje pozivalac — kao što radi
 `client_exists_in_agency`.
 
-*Poslednje ažuriranje: 2026-07-31 (bezbednosna popravka pretrage poseta).*
+## Changelog 2026-07-31 — AI asistent Faza B (write predlozi sa potvrdom)
+
+Write alati **ne pišu u bazu**. Server validira / razrešava imena, vraća
+`pending_action`, a klijent posle „Potvrdi” zove postojeće rute.
+
+| Alat | Ko sme | Izvršenje posle potvrde |
+|------|--------|-------------------------|
+| `createFieldVisit` | owner, collaborator, field_worker | `POST /api/field-visits` |
+| `updateComplianceRecordExpiry` | owner, collaborator | `PATCH /api/compliance-records/[id]` |
+| `assignCollaboratorToClient` | **samo owner** | `PATCH /api/clients/[id]` |
+
+**Tok:** alat → `ToolOutcome.pendingAction` → `/api/assistant/chat` šalje
+`pending_action` → `ActionConfirmCard` → postojeći API. Model dobija samo
+`status: pending_confirmation` (bez UUID u kontekstu) i ne sme da tvrdi da je
+akcija već urađena. Jedan predlog po potezu; nova poruka u chatu tiho otkazuje
+nepotvrđen predlog.
+
+**Razrešavanje:** `resolveClientArg` / `resolveWorkerArg` /
+`resolveCollaboratorArg` / `resolveComplianceRecordArg` (klijent + subject_name
++ opcioni category/record_type). Ambiguous → `needs_clarification`.
+
+**Ključni fajlovi:** `lib/agent/pending-action.ts`, `lib/agent/tools/create-field-visit.ts`,
+`update-compliance-expiry.ts`, `assign-collaborator.ts`,
+`components/agencija/asistent/ActionConfirmCard.tsx`.
+
+## Changelog 2026-08-01 — getMyAssignedClients
+
+Saradnik na „za koliko klijenata sam zadužen” nije imao alat, pa je model
+odgovarao da nema pristup — iako je opseg već u `clientIdsInScope`.
+
+| Stavka | Detalj |
+|--------|--------|
+| Alat | `getMyAssignedClients` (read), opcioni `client_name` |
+| Query | `listScopedClientsWithStats` — batch radnici + rokovi |
+| „Zadužen” | `assigned_count` = strogo `assigned_collaborator_id` |
+| Širi opseg | `count` / `visit_only_count`, `scope: assigned_and_visits` |
+| Prompt | prvo pozovi alat pre „nemam pristup”; razlikuj assigned vs posete |
+
+## Changelog 2026-08-01 — Predstojeće/Istorija + notifikacija dodele posete
+
+| Stavka | Detalj |
+|--------|--------|
+| UI | Tabovi Predstojeće / Istorija pored Moje / Sve; default Moje + Predstojeće |
+| Bedž | „Zakazano” (`bzr-badge-accent`) na predstojećim redovima |
+| Filter | `time=upcoming\|history` u `listFieldVisitsForAgency` |
+| Notifikacija | `notifyFieldVisitAssigned` iz `POST /api/field-visits` (UI + Zrno) |
+| Dedupe | `field-visit-assigned-{visitId}`; ne šalje se kreatoru (self-assign) |
+| Tekst | `Dodeljena ti je nova poseta: {klijent}, {datum} u {vreme}.` |
+
+*Poslednje ažuriranje: 2026-08-01 (posete: predstojeće + notifikacija).*
 
 

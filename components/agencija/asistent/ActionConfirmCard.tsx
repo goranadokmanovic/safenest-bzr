@@ -1,0 +1,184 @@
+"use client";
+
+import { useState } from "react";
+import { useTranslations } from "@/components/i18n/locale-provider";
+import type { PendingAction } from "@/lib/agent/pending-action";
+
+type Props = {
+  action: PendingAction;
+  onConfirmed: (successMessage: string) => void;
+  onCancelled: () => void;
+};
+
+function DisplayRows({ action }: { action: PendingAction }) {
+  const { m } = useTranslations();
+  const c = m.dashboard.assistant.confirm;
+
+  if (action.kind === "createFieldVisit") {
+    return (
+      <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
+        <div>
+          <dt className="text-ink/55">{c.client}</dt>
+          <dd className="font-medium text-ink">{action.display.client_name}</dd>
+        </div>
+        <div>
+          <dt className="text-ink/55">{c.worker}</dt>
+          <dd className="font-medium text-ink">{action.display.worker_name}</dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-ink/55">{c.scheduledAt}</dt>
+          <dd className="font-medium text-ink">
+            {action.display.scheduled_at_label}
+          </dd>
+        </div>
+      </dl>
+    );
+  }
+
+  if (action.kind === "updateComplianceRecordExpiry") {
+    return (
+      <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
+        <div>
+          <dt className="text-ink/55">{c.client}</dt>
+          <dd className="font-medium text-ink">{action.display.client_name}</dd>
+        </div>
+        <div>
+          <dt className="text-ink/55">{c.subject}</dt>
+          <dd className="font-medium text-ink">{action.display.subject_name}</dd>
+        </div>
+        <div>
+          <dt className="text-ink/55">{c.recordType}</dt>
+          <dd className="font-medium text-ink">
+            {action.display.record_type_label}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-ink/55">{c.category}</dt>
+          <dd className="font-medium text-ink">{action.display.category}</dd>
+        </div>
+        <div>
+          <dt className="text-ink/55">{c.currentExpiry}</dt>
+          <dd className="font-medium text-ink">
+            {action.display.current_expiry_label ?? "—"}
+          </dd>
+        </div>
+        <div>
+          <dt className="text-ink/55">{c.newExpiry}</dt>
+          <dd className="font-medium text-ink">
+            {action.display.new_expiry_label}
+          </dd>
+        </div>
+      </dl>
+    );
+  }
+
+  return (
+    <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
+      <div>
+        <dt className="text-ink/55">{c.client}</dt>
+        <dd className="font-medium text-ink">{action.display.client_name}</dd>
+      </div>
+      <div>
+        <dt className="text-ink/55">{c.collaborator}</dt>
+        <dd className="font-medium text-ink">
+          {action.display.collaborator_name}
+        </dd>
+      </div>
+      {action.display.previous_collaborator_name ? (
+        <div className="sm:col-span-2">
+          <dt className="text-ink/55">{c.previousCollaborator}</dt>
+          <dd className="font-medium text-ink">
+            {action.display.previous_collaborator_name}
+          </dd>
+        </div>
+      ) : null}
+    </dl>
+  );
+}
+
+export function ActionConfirmCard({
+  action,
+  onConfirmed,
+  onCancelled,
+}: Props) {
+  const { m } = useTranslations();
+  const c = m.dashboard.assistant.confirm;
+  const labels = c.kindLabels as Record<string, string>;
+
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function confirm() {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+
+    try {
+      const res = await fetch(action.execute.path, {
+        method: action.execute.method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action.execute.body),
+      });
+      const json = (await res.json().catch(() => ({}))) as {
+        error?: string;
+      };
+
+      if (!res.ok) {
+        setError(json.error ?? m.common.error);
+        return;
+      }
+
+      const successKey =
+        action.kind === "createFieldVisit"
+          ? c.successCreateVisit
+          : action.kind === "updateComplianceRecordExpiry"
+            ? c.successUpdateExpiry
+            : c.successAssign;
+      onConfirmed(successKey);
+    } catch {
+      setError(m.common.networkError);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-xl border border-accent/35 bg-surface/80 p-4">
+      <p className="text-[0.7rem] font-semibold uppercase tracking-wide text-accent">
+        {c.title}
+      </p>
+      <p className="mt-1 text-sm font-medium text-ink">
+        {labels[action.kind] ?? action.kind}
+      </p>
+      <p className="mt-1 text-xs text-ink/70">{action.summary}</p>
+      <div className="mt-3">
+        <DisplayRows action={action} />
+      </div>
+
+      {error ? (
+        <p className="mt-3 text-xs text-danger" role="alert">
+          {error}
+        </p>
+      ) : null}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => void confirm()}
+          disabled={busy}
+          className="bzr-btn bzr-btn-primary"
+        >
+          {busy ? c.confirming : c.confirm}
+        </button>
+        <button
+          type="button"
+          onClick={onCancelled}
+          disabled={busy}
+          className="bzr-btn"
+        >
+          {c.cancel}
+        </button>
+      </div>
+    </div>
+  );
+}

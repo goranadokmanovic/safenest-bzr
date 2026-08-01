@@ -32,6 +32,7 @@ export default async function AgencijaTerenskePosetePage() {
   const [{ rows, error }, workers] = await Promise.all([
     listFieldVisitsForAgency(supabase, agency_id, user.id, {
       scope: "mine",
+      time: "upcoming",
     }),
     listAgencyWorkers(supabase, agency_id),
   ]);

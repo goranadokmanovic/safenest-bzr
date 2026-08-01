@@ -108,7 +108,11 @@ export const POST = withApiCatch(async (request: Request) => {
 
   try {
     const result = await runAgentTurn(ctx, systemPrompt, parsed.data.messages);
-    return jsonOk({ reply: result.reply, toolTrace: result.toolTrace });
+    return jsonOk({
+      reply: result.reply,
+      toolTrace: result.toolTrace,
+      pending_action: result.pendingAction,
+    });
   } catch (e) {
     if (e instanceof AgentError) {
       return jsonError(e.message, e.status, { code: e.code });

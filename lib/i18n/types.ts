@@ -430,10 +430,15 @@ export type Messages = {
       noAgency: string;
       noVisits: string;
       noVisitsMine: string;
+      noVisitsMineUpcoming: string;
       noVisitsFiltered: string;
       tabMine: string;
       tabAll: string;
+      tabUpcoming: string;
+      tabHistory: string;
       tabsAriaLabel: string;
+      tabsTimeAriaLabel: string;
+      scheduledBadge: string;
       filterClientName: string;
       filterIndustry: string;
       filterRisk: string;
@@ -665,12 +670,42 @@ export type Messages = {
       roleYou: string;
       roleAssistant: string;
       historyTrimmed: string;
+      pendingProposal: string;
       toolLabels: {
         getVisitCountByAgencyUser: string;
         getUpcomingDeadlines: string;
         getEmployeesWithoutComplianceRecords: string;
         getClientSummary: string;
+        getMyAssignedClients: string;
         searchFieldVisits: string;
+        createFieldVisit: string;
+        updateComplianceRecordExpiry: string;
+        assignCollaboratorToClient: string;
+      };
+      confirm: {
+        title: string;
+        confirm: string;
+        confirming: string;
+        cancel: string;
+        cancelled: string;
+        client: string;
+        worker: string;
+        scheduledAt: string;
+        subject: string;
+        recordType: string;
+        category: string;
+        currentExpiry: string;
+        newExpiry: string;
+        collaborator: string;
+        previousCollaborator: string;
+        successCreateVisit: string;
+        successUpdateExpiry: string;
+        successAssign: string;
+        kindLabels: {
+          createFieldVisit: string;
+          updateComplianceRecordExpiry: string;
+          assignCollaboratorToClient: string;
+        };
       };
     };
   };

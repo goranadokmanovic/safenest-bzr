@@ -1,9 +1,10 @@
 import { callChatWithTools } from "@/lib/agent/llm";
-import { findTool, TOOL_DEFINITIONS } from "@/lib/agent/registry";
+import { findTool, toolDefinitionsForProfile } from "@/lib/agent/registry";
 import {
   AgentError,
   type AgentMessage,
   type ChatMessage,
+  type PendingAction,
   type ToolContext,
   type ToolTrace,
 } from "@/lib/agent/types";
@@ -21,6 +22,8 @@ const MAX_TOOL_RESULT_CHARS = 12_000;
 export type AgentTurnResult = {
   reply: string;
   toolTrace: ToolTrace[];
+  /** Write predlog spreman za ActionConfirmCard; null ako nema. */
+  pendingAction: PendingAction | null;
 };
 
 function parseToolArguments(raw: string): Record<string, unknown> {
@@ -65,6 +68,8 @@ export async function runAgentTurn(
   ];
 
   const toolTrace: ToolTrace[] = [];
+  let pendingAction: PendingAction | null = null;
+  const tools = toolDefinitionsForProfile(ctx.profile);
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round += 1) {
     const lastRound = round === MAX_TOOL_ROUNDS;
@@ -72,7 +77,7 @@ export async function runAgentTurn(
     const completion = await callChatWithTools({
       messages,
       // U poslednjem krugu sklanjamo alate da bi model morao da odgovori tekstom.
-      tools: lastRound ? [] : TOOL_DEFINITIONS,
+      tools: lastRound ? [] : tools,
     });
 
     if (completion.toolCalls.length === 0) {
@@ -84,7 +89,7 @@ export async function runAgentTurn(
           "EMPTY_COMPLETION",
         );
       }
-      return { reply, toolTrace };
+      return { reply, toolTrace, pendingAction };
     }
 
     messages.push({
@@ -98,7 +103,7 @@ export async function runAgentTurn(
     let forcedReply: string | null = null;
 
     for (const call of completion.toolCalls) {
-      const tool = findTool(call.function.name);
+      const tool = findTool(call.function.name, ctx.profile);
       const args = parseToolArguments(call.function.arguments);
 
       if (!tool) {
@@ -144,10 +149,32 @@ export async function runAgentTurn(
       if (outcome.ok && outcome.finalReply && forcedReply === null) {
         forcedReply = outcome.finalReply;
       }
+
+      if (outcome.ok && outcome.pendingAction) {
+        if (pendingAction !== null) {
+          // Jedan predlog po potezu — drugi write u istom krugu odbijamo.
+          messages[messages.length - 1] = {
+            role: "tool",
+            tool_call_id: call.id,
+            content: JSON.stringify({
+              error:
+                "Već postoji jedan predlog koji čeka potvrdu. Sačekaj da korisnik potvrdi ili otkaže pre nove write akcije.",
+            }),
+          };
+          toolTrace[toolTrace.length - 1] = {
+            name: tool.name,
+            arguments: args,
+            ok: false,
+            error: "Već postoji predlog koji čeka potvrdu.",
+          };
+        } else {
+          pendingAction = outcome.pendingAction;
+        }
+      }
     }
 
     if (forcedReply !== null) {
-      return { reply: forcedReply, toolTrace };
+      return { reply: forcedReply, toolTrace, pendingAction };
     }
   }
 

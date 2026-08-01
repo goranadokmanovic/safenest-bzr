@@ -1,4 +1,8 @@
 import type { AuthProfile } from "@/lib/api/session";
+import {
+  canMutateAgencyRecords,
+  canMutateFieldRecords,
+} from "@/lib/api/session";
 
 export type SystemPromptContext = {
   profile: AuthProfile;
@@ -23,6 +27,42 @@ function roleLabel(role: string): string {
   }
 }
 
+function writeCapabilities(profile: AuthProfile): string[] {
+  const lines: string[] = [
+    "WRITE AKCIJE (predlozi sa potvrdom):",
+    "- Write alati NE izvršavaju izmenu. Oni samo pripremaju predlog; korisnik potvrđuje dugmetom ispod poruke.",
+    "- Kad alat vrati status 'pending_confirmation', ukratko opiši predlog i reci da potvrdi ili otkaže dugmetom. NIKADA ne tvrdi da je akcija već sačuvana ili izvršena.",
+  ];
+
+  if (canMutateFieldRecords(profile)) {
+    lines.push(
+      "- createFieldVisit — predlog nove terenske posete (klijent, član agencije, datum/vreme).",
+    );
+  }
+  if (canMutateAgencyRecords(profile)) {
+    lines.push(
+      "- updateComplianceRecordExpiry — predlog izmene datuma isteka compliance zapisa. Uvek prosledi client_name i subject_name; category i record_type kad su poznati.",
+    );
+  }
+  if (profile.role === "agency_owner") {
+    lines.push(
+      "- assignCollaboratorToClient — predlog dodele saradnika klijentu (samo ti kao vlasnik).",
+    );
+  } else {
+    lines.push(
+      "- Ne možeš da dodeljuješ saradnike klijentima — to sme samo vlasnik agencije.",
+    );
+  }
+
+  if (!canMutateAgencyRecords(profile)) {
+    lines.push(
+      "- Ne možeš da menjaš compliance rokove — to smeju vlasnik i saradnik.",
+    );
+  }
+
+  return lines;
+}
+
 /**
  * Datum se ubacuje eksplicitno jer model inače pogađa relativne izraze
  * („prošlog meseca”, „ovog kvartala”) na osnovu podataka iz treninga.
@@ -38,7 +78,7 @@ export function buildSystemPrompt(ctx: SystemPromptContext): string {
     }.`,
     ctx.agencyName ? `- Agencija: ${ctx.agencyName}.` : "- Agencija nije poznata.",
     ctx.scopedToAssignedClients
-      ? "- Korisnik vidi samo klijente koji su mu dodeljeni. Alati to već poštuju — ne pominji klijente van tog opsega i ne nagađaj da ih ima."
+      ? "- Korisnik vidi klijente u svom opsegu (dodeljeni + oni sa poseta). Alati to već poštuju — ne pominji klijente van opsega i ne nagađaj da ih ima."
       : "- Korisnik vidi sve klijente svoje agencije.",
     "",
     "KAKO ODGOVARAŠ:",
@@ -48,21 +88,24 @@ export function buildSystemPrompt(ctx: SystemPromptContext): string {
     "",
     "PRAVILA ZA PODATKE:",
     "- Nikada ne izmišljaj brojeve, imena, datume ni nazive klijenata. Sve što tvrdiš mora doći iz rezultata alata.",
+    "- Ako pitanje zvuči kao podatak iz aplikacije (npr. koliko klijenata imam, za koje sam zadužen, koji rokovi ističu), PRVO pozovi odgovarajući alat. Ne odustaj sa „nemam pristup” pre nego što proveriš alat.",
+    "- „Nemam pristup” reci samo ako alat vrati client_out_of_scope, forbidden ili eksplicitno odbijanje — ne nagađaj iz opšteg znanja.",
     "- Ako alat vrati status 'empty', jasno reci da nema rezultata. Ne pretpostavljaj da podatak postoji negde drugde.",
-    "- Ako alat vrati status 'needs_clarification', 'client_not_found' ili 'worker_not_found', postavi korisniku kratko pitanje umesto da pogađaš.",
+    "- Ako alat vrati status 'needs_clarification', 'client_not_found', 'worker_not_found', 'collaborator_not_found' ili 'record_not_found', postavi korisniku kratko pitanje umesto da pogađaš.",
     "- Status 'client_out_of_scope' ne obrađuješ — taj odgovor sastavlja aplikacija doslovno i potez se prekida pre nego što dođeš na red.",
     "- Ako je rezultat skraćen (truncated: true), reci koliko si stavki prikazao i da ih ima još.",
     "- Za pitanja o podacima uvek pozovi alat. Ne odgovaraj iz opšteg znanja.",
     "- Kada korisnik imenuje klijenta, taj naziv uvek prosledi kao parametar alata (client_name), i kod pretrage poseta. Nikada ga ne ostavljaj samo unutar teksta upita i nikada ne odgovaraj o drugom klijentu nego što je pitan.",
     "",
     "POJMOVI (važno, lako se mešaju):",
-    "- 'Član agencije' / kolega = korisnik aplikacije kome se dodeljuju terenske posete. Za brojanje poseta koristi getVisitCountByAgencyUser.",
-    "- 'Radnik klijenta' = zaposleni u firmi klijenta, na njega se vode lekarski pregledi i obuke. Za njih koristi getEmployeesWithoutComplianceRecords.",
+    "- 'Član agencije' / kolega = korisnik aplikacije kome se dodeljuju terenske posete. Za brojanje poseta koristi getVisitCountByAgencyUser; za novu posetu createFieldVisit.",
+    "- 'Radnik klijenta' = zaposleni u firmi klijenta, na njega se vode lekarski pregledi i obuke. Za njih koristi getEmployeesWithoutComplianceRecords / updateComplianceRecordExpiry (subject_name).",
     "- 'Rokovi' = compliance zapisi sa datumom isteka (lekarski pregledi, osposobljavanja, pregledi opreme).",
+    "- 'Moji klijenti' / 'za koliko sam zadužen' → getMyAssignedClients. Za „zadužen” koristi assigned_count (stroga dodela). count može uključivati i klijente samo preko poseta (visit_only_count) — ne mešaj ta dva broja.",
+    "",
+    ...writeCapabilities(ctx.profile),
     "",
     "OGRANIČENJA:",
-    "- Trenutno možeš samo da čitaš podatke. Ne možeš da kreiraš posete, menjaš rokove ni dodeljuješ saradnike.",
-    "- Ako korisnik traži takvu izmenu, reci da ta mogućnost još nije dostupna i uputi ga na odgovarajući ekran u aplikaciji.",
     "- Ne daješ pravne savete niti tumačiš propise kao konačno mišljenje.",
   ];
 

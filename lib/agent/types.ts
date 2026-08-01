@@ -1,5 +1,8 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { AuthProfile } from "@/lib/api/session";
+import type { PendingAction } from "@/lib/agent/pending-action";
+
+export type { PendingAction };
 
 /** Poruka kakvu razmenjuju UI i /api/assistant/chat. */
 export type AgentMessage = {
@@ -61,6 +64,12 @@ export type ToolOutcome =
        * biti ista svaki put (v. lib/agent/fixed-replies.ts).
        */
       finalReply?: string;
+      /**
+       * Write predlog (Faza B). Server ga ne izvršava — ide klijentu kao
+       * `pending_action` za ActionConfirmCard. Ne ubacuj ID-jeve u `data`
+       * koji ide modelu; drži ih samo ovde.
+       */
+      pendingAction?: PendingAction;
     }
   | { ok: false; error: string };
 

@@ -195,6 +195,46 @@ function VisitSearchList({ data }: { data: Row }) {
   );
 }
 
+function AssignedClientsList({ data }: { data: Row }) {
+  const rows = asRows(data.clients);
+
+  return (
+    <div className="space-y-2 text-xs">
+      <p>
+        <span className="text-ink/60">Zadužen: </span>
+        <span className="font-semibold text-ink">
+          {text(data.assigned_count)}
+        </span>
+        <span className="mx-2 text-ink/40">·</span>
+        <span className="text-ink/60">U opsegu: </span>
+        <span className="font-semibold text-ink">{text(data.count)}</span>
+      </p>
+      {rows.length > 0 ? (
+        <ul className="space-y-1">
+          {rows.map((row, i) => (
+            <li key={i} className="flex justify-between gap-3">
+              <span>
+                {text(row.name)}
+                {row.is_assigned === true ? (
+                  <span className="ml-1.5 text-ink/45">(dodeljen)</span>
+                ) : null}
+              </span>
+              <span className="shrink-0 text-ink/60">
+                {text(row.employees_active)} radn.
+                {(row.compliance_expired as number) > 0
+                  ? ` · ${text(row.compliance_expired)} isteklo`
+                  : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-ink/60">—</p>
+      )}
+    </div>
+  );
+}
+
 function ToolBody({ trace }: { trace: ToolTrace }) {
   const data = asRecord(trace.data);
   if (!data) return <p className="text-ink/60">—</p>;
@@ -207,7 +247,25 @@ function ToolBody({ trace }: { trace: ToolTrace }) {
     );
   }
 
-  if (data.status === "needs_clarification" || data.status === "client_not_found" || data.status === "worker_not_found") {
+  if (data.status === "pending_confirmation") {
+    return (
+      <p className="text-xs text-ink/70">
+        {text(data.summary) !== "—"
+          ? text(data.summary)
+          : "Predlog čeka potvrdu."}
+      </p>
+    );
+  }
+
+  if (
+    data.status === "needs_clarification" ||
+    data.status === "client_not_found" ||
+    data.status === "worker_not_found" ||
+    data.status === "collaborator_not_found" ||
+    data.status === "record_not_found" ||
+    data.status === "forbidden" ||
+    data.status === "already_assigned"
+  ) {
     const candidates = Array.isArray(data.candidates)
       ? (data.candidates as unknown[]).map(text)
       : [];
@@ -227,6 +285,8 @@ function ToolBody({ trace }: { trace: ToolTrace }) {
       return <VisitCounts data={data} />;
     case "getClientSummary":
       return <ClientSummary data={data} />;
+    case "getMyAssignedClients":
+      return <AssignedClientsList data={data} />;
     case "searchFieldVisits":
       return <VisitSearchList data={data} />;
     default:

@@ -5,8 +5,13 @@ import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 export type FieldVisitListScope = "mine" | "all";
 
+/** Predstojeće vs istorija — ortogonalno na Moje/Sve. */
+export type FieldVisitListTime = "upcoming" | "history";
+
 export type FieldVisitListFilters = {
   scope: FieldVisitListScope;
+  /** Podrazumevano upcoming. */
+  time?: FieldVisitListTime;
   /** Tekstualna pretraga naziva klijenta (client_companies.name). */
   clientName?: string;
   /** Delatnost klijenta — client_companies.activity_sector. */
@@ -125,6 +130,23 @@ function startOfDayIso(dateOnly: string): string {
 }
 
 /**
+ * Predstojeća poseta: scheduled_at u budućnosti (ili sada) i nije
+ * completed/cancelled. Zakasneli nacrti idu u istoriju.
+ */
+export function isUpcomingFieldVisit(
+  scheduledAt: string,
+  status: string,
+  nowMs: number = Date.now(),
+): boolean {
+  const normalized =
+    status === "scheduled" ? "draft" : String(status ?? "").toLowerCase();
+  if (normalized === "completed" || normalized === "cancelled") return false;
+  const t = new Date(scheduledAt).getTime();
+  if (Number.isNaN(t)) return false;
+  return t >= nowMs;
+}
+
+/**
  * Lista terenskih poseta sa tab scope + AND filterima.
  * Napomena: risk_level živi u metadata (nije top-level kolona).
  * Delatnost = client_companies.activity_sector.
@@ -167,12 +189,28 @@ export async function listFieldVisitsForAgency(
     }
   }
 
+  const time: FieldVisitListTime = filters.time === "history" ? "history" : "upcoming";
+  const nowIso = new Date().toISOString();
+
   let query = supabase
     .from("field_visits")
     .select(LIST_SELECT)
     .eq("agency_id", agencyId)
-    .order("scheduled_at", { ascending: false })
+    .order("scheduled_at", { ascending: time === "upcoming" })
     .limit(limit);
+
+  if (time === "upcoming") {
+    // Budućnost + nije završeno/otkazano.
+    query = query
+      .gte("scheduled_at", nowIso)
+      .not("status", "in", '("completed","cancelled")');
+  } else {
+    // Prošlost ili završeno/otkazano (uključujući zakasnele nacrte).
+    // Navodnici oko ISO — inače `:` u timestamp-u lomi PostgREST or-filter.
+    query = query.or(
+      `scheduled_at.lt."${nowIso}",status.in.("completed","cancelled")`,
+    );
+  }
 
   if (filters.scope === "mine") {
     const { data: collabRows } = await supabase
@@ -518,8 +556,13 @@ export function parseFieldVisitListFilters(
         ? false
         : undefined;
 
+  const timeRaw = searchParams.get("time");
+  const time: FieldVisitListTime =
+    timeRaw === "history" ? "history" : "upcoming";
+
   return {
     scope,
+    time,
     clientName: searchParams.get("client_name")?.trim() || undefined,
     industry: searchParams.get("industry")?.trim() || undefined,
     riskLevel,

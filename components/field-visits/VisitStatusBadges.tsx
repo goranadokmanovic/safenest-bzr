@@ -59,6 +59,12 @@ export function VisitStatusBadge({ status }: { status: VisitStatus }) {
   return <span className={style}>{label}</span>;
 }
 
+/** Vremenska oznaka — poseta je u budućnosti i nije završena/otkazana. */
+export function ScheduledBadge() {
+  const { m } = useTranslations();
+  return <span className="bzr-badge-accent">{m.dashboard.fieldVisits.scheduledBadge}</span>;
+}
+
 export function ReportLockBadge({
   status,
   reopenPending = false,

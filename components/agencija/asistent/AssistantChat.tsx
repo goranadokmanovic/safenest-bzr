@@ -2,10 +2,15 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "@/components/i18n/locale-provider";
+import { ActionConfirmCard } from "@/components/agencija/asistent/ActionConfirmCard";
 import {
   ToolTraceCard,
   type ToolTrace,
 } from "@/components/agencija/asistent/ToolTraceCard";
+import {
+  isPendingAction,
+  type PendingAction,
+} from "@/lib/agent/pending-action";
 
 /** Mora da prati MAX_HISTORY_MESSAGES u app/api/assistant/chat/route.ts. */
 const MAX_HISTORY_MESSAGES = 20;
@@ -15,10 +20,17 @@ type ChatEntry = {
   role: "user" | "assistant";
   content: string;
   toolTrace?: ToolTrace[];
+  pendingAction?: PendingAction | null;
 };
 
 function newId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function clearPending(entries: ChatEntry[]): ChatEntry[] {
+  return entries.map((e) =>
+    e.pendingAction ? { ...e, pendingAction: null } : e,
+  );
 }
 
 export function AssistantChat() {
@@ -47,14 +59,15 @@ export function AssistantChat() {
         role: "user",
         content: question,
       };
-      const nextEntries = [...entries, userEntry];
+
+      // Nova poruka otkazuje nepotvrđen predlog — prirodnije od blokade send-a.
+      const nextEntries = [...clearPending(entries), userEntry];
 
       setEntries(nextEntries);
       setInput("");
       setError(null);
       setLoading(true);
 
-      // Server prihvata ograničen broj poruka; šaljemo najnovije.
       const payload = nextEntries
         .slice(-MAX_HISTORY_MESSAGES)
         .map((e) => ({ role: e.role, content: e.content }));
@@ -69,6 +82,7 @@ export function AssistantChat() {
         const json = (await res.json().catch(() => ({}))) as {
           reply?: string;
           toolTrace?: ToolTrace[];
+          pending_action?: unknown;
           error?: string;
         };
 
@@ -77,6 +91,10 @@ export function AssistantChat() {
           return;
         }
 
+        const pending = isPendingAction(json.pending_action)
+          ? json.pending_action
+          : null;
+
         setEntries((prev) => [
           ...prev,
           {
@@ -84,6 +102,7 @@ export function AssistantChat() {
             role: "assistant",
             content: json.reply!,
             toolTrace: json.toolTrace ?? [],
+            pendingAction: pending,
           },
         ]);
       } catch {
@@ -113,6 +132,32 @@ export function AssistantChat() {
     setError(null);
     setInput("");
     inputRef.current?.focus();
+  }
+
+  function handleConfirmed(entryId: string, successMessage: string) {
+    setEntries((prev) => [
+      ...prev.map((e) =>
+        e.id === entryId ? { ...e, pendingAction: null } : e,
+      ),
+      {
+        id: newId(),
+        role: "assistant",
+        content: successMessage,
+      },
+    ]);
+  }
+
+  function handleCancelled(entryId: string) {
+    setEntries((prev) => [
+      ...prev.map((e) =>
+        e.id === entryId ? { ...e, pendingAction: null } : e,
+      ),
+      {
+        id: newId(),
+        role: "assistant",
+        content: a.confirm.cancelled,
+      },
+    ]);
   }
 
   const isEmpty = entries.length === 0;
@@ -167,6 +212,13 @@ export function AssistantChat() {
               </p>
               {entry.toolTrace?.length ? (
                 <ToolTraceCard traces={entry.toolTrace} />
+              ) : null}
+              {entry.pendingAction ? (
+                <ActionConfirmCard
+                  action={entry.pendingAction}
+                  onConfirmed={(msg) => handleConfirmed(entry.id, msg)}
+                  onCancelled={() => handleCancelled(entry.id)}
+                />
               ) : null}
             </div>
           ),

@@ -1878,6 +1878,7 @@
   .bzr-field-visits-table .bzr-badge-warning,
   .bzr-field-visits-table .bzr-badge-danger,
   .bzr-field-visits-table .bzr-badge-neutral,
+  .bzr-field-visits-table .bzr-badge-accent,
   .bzr-clients-table .bzr-badge-success,
   .bzr-clients-table .bzr-badge-warning,
   .bzr-clients-table .bzr-badge-danger,
@@ -2362,6 +2363,19 @@
     border: 1px solid rgb(var(--color-border) / 0.22);
     background: rgb(var(--color-ink) / 0.05);
     color: rgb(var(--color-ink) / 0.78);
+  }
+
+  .bzr-badge-accent {
+    @apply bzr-badge;
+    border: 1px solid rgb(var(--color-accent) / 0.4);
+    background: rgb(var(--color-accent) / 0.14);
+    color: rgb(var(--color-accent-deep));
+  }
+
+  [data-theme="dark"] .bzr-badge-accent {
+    color: rgb(var(--color-accent-bright));
+    background: rgb(var(--color-accent) / 0.18);
+    border-color: rgb(var(--color-accent) / 0.45);
   }
 
   .bzr-back {

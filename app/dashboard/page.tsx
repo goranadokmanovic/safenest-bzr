@@ -255,7 +255,7 @@ export default async function DashboardPage() {
             <dt className="text-sm font-semibold uppercase tracking-wider text-ink/50">
               {h.clientsCount}
             </dt>
-            <dd className="mt-2 font-display text-4xl font-semibold tabular-nums tracking-tight text-ink">
+            <dd className="mt-2 font-sans text-4xl font-semibold tabular-nums tracking-tight text-ink">
               {clientCount ?? m.common.noData}
             </dd>
           </div>
@@ -263,7 +263,7 @@ export default async function DashboardPage() {
             <dt className="text-sm font-semibold uppercase tracking-wider text-ink/50">
               {h.visitsCount}
             </dt>
-            <dd className="mt-2 font-display text-4xl font-semibold tabular-nums tracking-tight text-ink">
+            <dd className="mt-2 font-sans text-4xl font-semibold tabular-nums tracking-tight text-ink">
               {visitCount ?? m.common.noData}
             </dd>
           </div>

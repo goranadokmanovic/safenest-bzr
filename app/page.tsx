@@ -103,7 +103,7 @@ export default function HomePage() {
             { n: "24/7", l: "Dostupnost dokumentacije" },
           ].map((s) => (
             <div key={s.l}>
-              <p className="font-display text-4xl font-light text-accent">{s.n}</p>
+              <p className="font-sans text-4xl font-semibold tabular-nums tracking-tight text-accent">{s.n}</p>
               <p className="mt-2 text-sm leading-snug text-ink/55">{s.l}</p>
             </div>
           ))}

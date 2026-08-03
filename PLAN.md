@@ -42,7 +42,7 @@ SaaS za agencije BZR (bezbednost i zdravlje na radu): klijenti, zaposleni, rokov
 
 
 
-## Status po fazama (stanje: avg 2026, ažurirano 2026-08-03 — Zakazivanje kalendar, visit_type, konflikti, monthly report)
+## Status po fazama (stanje: avg 2026, ažurirano 2026-08-03 — tipografija brojeva + Zakazivanje / visit_type / monthly report)
 
 
 
@@ -297,7 +297,7 @@ RLS: SELECT/INSERT/UPDATE/DELETE preko `can_manage_agency` (ili super_admin). Ac
 
 - **U toku (luxury UI, jul 2026).** Vizuelni rebrand na **Bez Zrna Rizika** — dark/light tema (`data-theme` + `localStorage` `bzr-theme`, default dark), fontovi **Manrope** (UI) + **Cormorant Garamond** (display), tokeni zlato `#D4AF35` / bg `#0A0A0B`. Bez izmene business logike / API / RLS (osim pečene migracije peers ispod).
 
-- **Landing (`app/page.tsx`):** header (logo mark ~92px + Bez**Zrna**Rizika + tagline), circular theme/menu, kicker sa 3 tačke + glow, 2-linijski headline sa metalnim gold italicom, CTA, stats strip; dekor `BrandDecor` `dots-ring` (rotiran, poluprovidan).
+- **Landing (`app/page.tsx`):** header (logo mark ~92px + Bez**Zrna**Rizika + tagline), circular theme/menu, kicker sa 3 tačke + glow, 2-linijski headline sa metalnim gold italicom, CTA, stats strip; dekor `BrandDecor` `dots-ring` (rotiran, poluprovidan). **Stat brojevi** (landing + dashboard `bzr-stat`): `font-sans` / Manrope + `tabular-nums` — ne `font-display` (Cormorant „1“ liči na „I“).
 
 - **Brand asseti:** `public/brand/` — `logo-web.png`, `logo-mark.png`, `logo-mobile.png`, `deco-*.png` (halftone, dots-ring/spiral, steps, megaphone).
 
@@ -1477,6 +1477,15 @@ bookmark). FAB ima stilizovani tooltip (`components/ui/Tooltip.tsx`).
 
 **Napomena:** migraciju `visit_type` primeniti u Supabase ako još nije.
 
-*Poslednje ažuriranje: 2026-08-03 (Zakazivanje kalendar UX, visit_type, konflikti, duration, monthly report).*
+## Changelog 2026-08-03 — tipografija brojeva (Manrope)
+
+| Stavka | Detalj |
+|--------|--------|
+| Problem | Cormorant Garamond (`font-display`) na velikim brojevima — cifra „1“ liči na slovo „I“ |
+| Dashboard | `app/dashboard/page.tsx` — `bzr-stat` dd (klijenti / terenske posete) → `font-sans` + `tabular-nums` |
+| Landing | `app/page.tsx` — stats strip → `font-sans` + `tabular-nums` (usklađeno) |
+| Ostaje | Naslovi i dalje `font-display` (Cormorant) |
+
+*Poslednje ažuriranje: 2026-08-03 (Manrope brojevi na dashboard/landing statistikama).*
 
 

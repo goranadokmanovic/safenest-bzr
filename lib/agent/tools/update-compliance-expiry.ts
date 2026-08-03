@@ -132,13 +132,16 @@ export const updateComplianceRecordExpiry: AgentTool = {
     }
 
     const record = recordArg.record;
-    const typeLabel = recordTypeLabel(record.record_type);
+    const typeLabel = recordTypeLabel(record.record_type, ctx.locale);
     const newLabel = formatBelgradeDate(when.isoDate);
     const currentLabel = record.expiry_date
       ? formatBelgradeDate(record.expiry_date)
       : null;
 
-    const summary = `Izmena roka: ${record.subject_name} (${typeLabel} — ${record.category}) kod ${clientArg.client.name} → ${newLabel}`;
+    const summary =
+      ctx.locale === "en"
+        ? `Deadline update: ${record.subject_name} (${typeLabel} — ${record.category}) at ${clientArg.client.name} → ${newLabel}`
+        : `Izmena roka: ${record.subject_name} (${typeLabel} — ${record.category}) kod ${clientArg.client.name} → ${newLabel}`;
 
     return {
       ok: true,

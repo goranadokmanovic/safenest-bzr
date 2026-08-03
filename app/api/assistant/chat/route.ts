@@ -26,6 +26,7 @@ const bodySchema = z.object({
     )
     .min(1)
     .max(MAX_HISTORY_MESSAGES),
+  locale: z.enum(["sr", "en"]).optional().default("sr"),
 });
 
 export const POST = withApiCatch(async (request: Request) => {
@@ -97,6 +98,7 @@ export const POST = withApiCatch(async (request: Request) => {
     agencyId,
     clientIds: visible.clientIds,
     todayIso,
+    locale: parsed.data.locale,
   };
 
   const systemPrompt = buildSystemPrompt({
@@ -104,6 +106,7 @@ export const POST = withApiCatch(async (request: Request) => {
     agencyName: (agency?.name as string | null) ?? null,
     todayIso,
     scopedToAssignedClients: isScopedCollaborator(profile),
+    locale: parsed.data.locale,
   });
 
   try {

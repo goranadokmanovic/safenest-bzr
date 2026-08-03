@@ -1,5 +1,6 @@
 "use client";
 
+import { MonthlyReportPanel } from "@/components/agencija/asistent/MonthlyReportPanel";
 import { useTranslations } from "@/components/i18n/locale-provider";
 import { clientOutOfScopeReply } from "@/lib/agent/fixed-replies";
 
@@ -311,6 +312,8 @@ function ToolBody({ trace }: { trace: ToolTrace }) {
       return <AssignedClientsList data={data} />;
     case "searchFieldVisits":
       return <VisitSearchList data={data} />;
+    case "generateClientMonthlyReport":
+      return <MonthlyReportPanel data={data} />;
     default:
       return <p className="text-ink/60">—</p>;
   }

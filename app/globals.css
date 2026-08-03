@@ -1851,6 +1851,16 @@
       filter 0.35s var(--ease-luxury);
   }
 
+  .bzr-field-visits-table .bzr-visit-row--deep-link td {
+    background: rgb(var(--color-accent) / 0.1);
+    border-color: rgb(var(--color-accent) / 0.35);
+  }
+
+  .bzr-field-visits-table .bzr-visit-row--deep-link {
+    z-index: 2;
+    box-shadow: inset 3px 0 0 rgb(var(--color-accent) / 0.85);
+  }
+
   .bzr-clients-table .bzr-client-row {
     cursor: pointer;
   }
@@ -1908,6 +1918,630 @@
 
   body:has(.bzr-page-canvas) .bzr-sidebar {
     z-index: 60;
+  }
+
+  /* ——— Zakazivanje calendar (Zrna) ——— */
+  .bzr-cal {
+    border-radius: 1.15rem;
+    border: 1px solid rgb(var(--color-border) / 0.14);
+    background: rgb(var(--color-surface) / 0.42);
+    box-shadow:
+      0 0 0 1px rgb(var(--color-accent) / 0.06),
+      0 24px 60px rgb(0 0 0 / 0.18);
+    backdrop-filter: blur(10px);
+    /* visible so visit hover tips are not clipped */
+    overflow: visible;
+  }
+
+  .bzr-cal-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 1px;
+    background: rgb(var(--color-border) / 0.22);
+    border-bottom: 1px solid rgb(var(--color-accent) / 0.18);
+  }
+
+  .bzr-cal-weekday {
+    background: rgb(var(--color-accent) / 0.14);
+    padding: 0.55rem 0.35rem;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 750;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: rgb(var(--color-accent-bright));
+    text-shadow: 0 0 12px rgb(var(--color-accent) / 0.45);
+  }
+
+  .bzr-cal-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 1px;
+    background: rgb(var(--color-border) / 0.18);
+    min-width: 36rem;
+  }
+
+  .bzr-cal-day-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1px;
+    background: rgb(var(--color-border) / 0.18);
+  }
+
+  .bzr-cal-weekdays--day {
+    grid-template-columns: 1fr;
+  }
+
+  .bzr-cal-cell--day {
+    min-height: 16rem;
+  }
+
+  .bzr-cal-cell {
+    position: relative;
+    z-index: 0;
+    min-height: 6.25rem;
+    padding: 0.45rem 0.4rem 0.5rem;
+    overflow: visible;
+    /* +2 nijanse vs ranije surface/0.62 */
+    background: rgb(var(--color-surface) / 0.78);
+    transition:
+      background 0.35s var(--ease-luxury),
+      box-shadow 0.35s var(--ease-luxury);
+  }
+
+  .bzr-cal-cell:has(.bzr-cal-chip-wrap:hover),
+  .bzr-cal-cell:has(.bzr-cal-chip-wrap:focus-within) {
+    z-index: 8;
+  }
+
+  .bzr-cal-cell--muted {
+    /* +5 nijansi vs ranije surface/0.32 + jaka opacity */
+    background: rgb(var(--color-surface) / 0.62);
+    opacity: 0.82;
+  }
+
+  .bzr-cal-cell--booked {
+    z-index: 1;
+    color: rgb(245 240 225 / 0.92);
+    background: rgb(18 16 12 / 0.94);
+    box-shadow:
+      inset 0 0 0 1px rgb(var(--color-accent) / 0.45),
+      0 0 0 1px rgb(var(--color-accent) / 0.14),
+      0 0 22px rgb(var(--color-accent) / 0.4),
+      0 0 42px rgb(var(--color-accent) / 0.2);
+  }
+
+  .bzr-cal-cell--booked:hover {
+    box-shadow:
+      inset 0 0 0 1px rgb(var(--color-accent-bright) / 0.55),
+      0 0 28px rgb(var(--color-accent) / 0.5),
+      0 0 52px rgb(var(--color-accent) / 0.24);
+  }
+
+  .bzr-cal-cell--booked .bzr-cal-daynum:not(.bzr-cal-daynum--today) {
+    color: rgb(255 236 170 / 0.9);
+  }
+
+  .bzr-cal-cell--booked .bzr-cal-count {
+    color: rgb(var(--color-accent-bright));
+  }
+
+  .bzr-cal-cell--booked .bzr-cal-chip {
+    color: rgb(245 240 225 / 0.92);
+    background: rgb(255 255 255 / 0.06);
+    border-left-color: rgb(var(--color-accent-bright) / 0.85);
+  }
+
+  .bzr-cal-cell--booked .bzr-cal-chip:hover {
+    background: rgb(var(--color-accent) / 0.22);
+  }
+
+  .bzr-cal-cell--booked .bzr-cal-chip .text-ink\/50,
+  .bzr-cal-cell--booked .bzr-cal-chip .text-ink\/60 {
+    color: rgb(255 236 170 / 0.45);
+  }
+
+  /*
+    Light theme: keep the dark Zrna calendar look the user prefers
+    (same surfaces / booked glow as dark mode).
+  */
+  [data-theme="light"] .bzr-cal {
+    border-color: rgb(255 255 255 / 0.08);
+    background: rgb(22 20 16 / 0.88);
+    box-shadow:
+      0 0 0 1px rgb(var(--color-accent) / 0.1),
+      0 24px 60px rgb(0 0 0 / 0.28);
+  }
+
+  [data-theme="light"] .bzr-cal-weekdays {
+    background: rgb(40 36 28 / 0.9);
+    border-bottom-color: rgb(var(--color-accent) / 0.45);
+  }
+
+  [data-theme="light"] .bzr-cal-weekday {
+    background: rgb(var(--color-accent) / 0.16);
+    color: rgb(255 220 90);
+    text-shadow: 0 0 14px rgb(var(--color-accent) / 0.55);
+  }
+
+  [data-theme="light"] .bzr-cal-month-grid {
+    background: rgb(40 36 28 / 0.85);
+  }
+
+  [data-theme="light"] .bzr-cal-cell {
+    /* +2 nijanse vs 32 28 22 */
+    background: rgb(48 42 34 / 0.94);
+    color: rgb(245 240 225 / 0.88);
+  }
+
+  [data-theme="light"] .bzr-cal-cell--muted {
+    /* +5 nijansi vs 22 20 16 */
+    background: rgb(72 64 52 / 0.9);
+    opacity: 0.88;
+  }
+
+  [data-theme="light"] .bzr-cal-cell--booked {
+    background: rgb(18 16 12 / 0.96);
+    color: rgb(245 240 225 / 0.92);
+    box-shadow:
+      inset 0 0 0 1px rgb(var(--color-accent) / 0.45),
+      0 0 0 1px rgb(var(--color-accent) / 0.14),
+      0 0 22px rgb(var(--color-accent) / 0.4),
+      0 0 42px rgb(var(--color-accent) / 0.2);
+  }
+
+  [data-theme="light"] .bzr-cal-daynum {
+    color: rgb(245 240 225 / 0.68);
+  }
+
+  [data-theme="light"] .bzr-cal-cell--booked .bzr-cal-daynum:not(.bzr-cal-daynum--today) {
+    color: rgb(255 236 170 / 0.9);
+  }
+
+  [data-theme="light"] .bzr-cal-count {
+    color: rgb(var(--color-accent-bright) / 0.95);
+  }
+
+  [data-theme="light"] .bzr-cal-chip {
+    color: rgb(245 240 225 / 0.9);
+    background: rgb(255 255 255 / 0.06);
+    border-left-color: rgb(var(--color-accent) / 0.7);
+  }
+
+  [data-theme="light"] .bzr-cal-chip:hover {
+    background: rgb(var(--color-accent) / 0.18);
+  }
+
+  [data-theme="light"] .bzr-cal-chip .text-ink\/50,
+  [data-theme="light"] .bzr-cal-chip .text-ink\/60 {
+    color: rgb(255 236 170 / 0.45);
+  }
+
+  [data-theme="light"] .bzr-cal-daycard {
+    border-color: rgb(255 255 255 / 0.1);
+    background: rgb(28 25 20 / 0.92);
+    color: rgb(245 240 225 / 0.88);
+  }
+
+  [data-theme="light"] .bzr-cal-daycard--booked {
+    background: rgb(18 16 12 / 0.96);
+    border-color: rgb(var(--color-accent) / 0.42);
+    color: rgb(245 240 225 / 0.92);
+    box-shadow:
+      inset 0 0 0 1px rgb(var(--color-accent) / 0.2),
+      0 0 24px rgb(var(--color-accent) / 0.3);
+  }
+
+  [data-theme="light"] .bzr-cal-daycard h2 {
+    color: rgb(245 240 225 / 0.7);
+  }
+
+  [data-theme="light"] .bzr-cal-daycard--booked h2 {
+    color: rgb(255 236 170 / 0.82);
+  }
+
+  [data-theme="light"] .bzr-cal-chip-full {
+    color: rgb(245 240 225 / 0.92);
+    background: rgb(255 255 255 / 0.06);
+    border-color: rgb(255 255 255 / 0.12);
+    border-left-color: rgb(var(--color-accent-bright) / 0.85);
+  }
+
+  [data-theme="light"] .bzr-cal-chip-full .text-ink\/55,
+  [data-theme="light"] .bzr-cal-chip-full .text-accent {
+    color: rgb(255 236 170 / 0.75);
+  }
+
+  [data-theme="light"] .bzr-cal-seg {
+    border-color: rgb(255 255 255 / 0.1);
+    background: rgb(28 25 20 / 0.9);
+    border-radius: 999px;
+  }
+
+  [data-theme="light"] .bzr-cal-seg-btn {
+    border-radius: 999px;
+    color: rgb(245 240 225 / 0.72);
+  }
+
+  [data-theme="light"] .bzr-cal-seg-btn:hover {
+    color: rgb(245 240 225 / 0.95);
+    background: rgb(var(--color-accent) / 0.12);
+  }
+
+  [data-theme="light"] .bzr-cal-nav {
+    border-left-color: rgb(255 255 255 / 0.12);
+  }
+
+  [data-theme="light"] .bzr-cal-nav-btn {
+    border-radius: 999px;
+    border-color: rgb(255 255 255 / 0.12);
+    background: rgb(28 25 20 / 0.92);
+    color: rgb(245 240 225 / 0.78);
+  }
+
+  [data-theme="light"] .bzr-cal-nav-btn:hover {
+    border-color: rgb(var(--color-accent) / 0.45);
+    color: rgb(var(--color-accent-bright));
+    box-shadow: 0 0 12px rgb(var(--color-accent) / 0.16);
+  }
+
+  .bzr-cal-daynum {
+    display: inline-flex;
+    height: 1.5rem;
+    min-width: 1.5rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    padding-inline: 0.3rem;
+    font-size: 0.91rem; /* +3px from 0.72rem */
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--color-ink) / 0.68);
+  }
+
+  .bzr-cal-daynum--today {
+    color: #15120a;
+    background: linear-gradient(
+      145deg,
+      rgb(var(--color-accent-bright)),
+      rgb(var(--color-accent))
+    );
+    box-shadow:
+      0 0 0 1px rgb(var(--color-accent) / 0.35),
+      0 0 14px rgb(var(--color-accent) / 0.35);
+  }
+
+  .bzr-cal-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.28rem;
+    font-size: 0.84rem; /* +3px from 0.65rem */
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: rgb(var(--color-accent-deep));
+  }
+
+  [data-theme="dark"] .bzr-cal-count {
+    color: rgb(var(--color-accent-bright) / 0.92);
+  }
+
+  .bzr-cal-count-dot {
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: rgb(var(--color-accent));
+    box-shadow: 0 0 8px rgb(var(--color-accent) / 0.75);
+  }
+
+  .bzr-cal-chip {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-radius: 0.35rem;
+    border-left: 2px solid rgb(var(--color-accent) / 0.65);
+    background: rgb(var(--color-surface) / 0.55);
+    padding: 0.2rem 0.4rem 0.2rem 0.45rem;
+    font-size: 0.84rem; /* +3px from 0.65rem */
+    line-height: 1.3;
+    color: rgb(var(--color-ink) / 0.88);
+    transition:
+      background 0.25s var(--ease-luxury),
+      border-color 0.25s var(--ease-luxury);
+  }
+
+  .bzr-cal-chip:hover {
+    background: rgb(var(--color-accent) / 0.14);
+    border-left-color: rgb(var(--color-accent));
+  }
+
+  .bzr-cal-chip-full {
+    display: block;
+    border-radius: 0.55rem;
+    border: 1px solid rgb(var(--color-border) / 0.22);
+    border-left: 3px solid rgb(var(--color-accent) / 0.7);
+    background: rgb(var(--color-surface) / 0.72);
+    padding: 0.45rem 0.55rem;
+    font-size: 0.89rem; /* +3px from 0.7rem */
+    line-height: 1.35;
+    color: rgb(var(--color-ink));
+    transition:
+      border-color 0.25s var(--ease-luxury),
+      box-shadow 0.25s var(--ease-luxury),
+      transform 0.25s var(--ease-luxury);
+  }
+
+  .bzr-cal-chip-full:hover {
+    border-color: rgb(var(--color-accent) / 0.4);
+    box-shadow: 0 0 16px rgb(var(--color-accent) / 0.12);
+    transform: translateY(-1px);
+  }
+
+  .bzr-cal-daycard {
+    position: relative;
+    min-height: 8rem;
+    border-radius: 0.85rem;
+    border: 1px solid rgb(var(--color-border) / 0.2);
+    background: rgb(var(--color-surface) / 0.5);
+    padding: 0.7rem 0.75rem;
+    backdrop-filter: blur(8px);
+    transition:
+      border-color 0.3s var(--ease-luxury),
+      box-shadow 0.3s var(--ease-luxury);
+  }
+
+  .bzr-cal-daycard--booked {
+    color: rgb(245 240 225 / 0.92);
+    border-color: rgb(var(--color-accent) / 0.42);
+    background: rgb(18 16 12 / 0.94);
+    box-shadow:
+      inset 0 0 0 1px rgb(var(--color-accent) / 0.2),
+      0 0 24px rgb(var(--color-accent) / 0.3);
+  }
+
+  .bzr-cal-daycard h2 {
+    font-size: 0.84rem;
+  }
+
+  .bzr-cal-daycard--booked h2 {
+    color: rgb(255 236 170 / 0.82);
+  }
+
+  .bzr-cal-daycard--booked .bzr-cal-count {
+    color: rgb(var(--color-accent-bright));
+  }
+
+  .bzr-cal-daycard--booked .bzr-cal-chip-full {
+    color: rgb(245 240 225 / 0.92);
+    background: rgb(255 255 255 / 0.06);
+    border-color: rgb(var(--color-accent) / 0.28);
+    border-left-color: rgb(var(--color-accent-bright) / 0.85);
+  }
+
+  .bzr-cal-daycard--booked .bzr-cal-chip-full .text-ink\/55 {
+    color: rgb(255 236 170 / 0.48);
+  }
+
+  .bzr-cal-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.85rem;
+  }
+
+  .bzr-cal-seg {
+    display: inline-flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.28rem;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--color-border) / 0.2);
+    background: rgb(var(--color-surface) / 0.55);
+    backdrop-filter: blur(8px);
+  }
+
+  .bzr-cal-seg-btn {
+    border-radius: 999px;
+    padding: 0.48rem 1.35rem;
+    min-height: 2.4rem;
+    font-size: 1.06rem;
+    color: rgb(var(--color-ink) / 0.72);
+    transition:
+      background 0.25s var(--ease-luxury),
+      color 0.25s var(--ease-luxury),
+      box-shadow 0.25s var(--ease-luxury),
+      transform 0.2s var(--ease-luxury);
+  }
+
+  .bzr-cal-seg-btn:hover {
+    color: rgb(var(--color-ink));
+    background: rgb(var(--color-accent) / 0.08);
+  }
+
+  .bzr-cal-seg-btn.is-active {
+    color: #15120a;
+    background: linear-gradient(
+      145deg,
+      rgb(var(--color-accent-bright)),
+      rgb(var(--color-accent))
+    );
+    box-shadow: 0 0 14px rgb(var(--color-accent) / 0.28);
+  }
+
+  .bzr-cal-nav {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding-left: 0.85rem;
+    margin-left: 0.15rem;
+    border-left: 1px solid rgb(var(--color-border) / 0.28);
+  }
+
+  .bzr-cal-nav-btn {
+    display: inline-flex;
+    height: 2.4rem;
+    min-width: 2.4rem;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    border: 1px solid rgb(var(--color-border) / 0.28);
+    background: rgb(var(--color-surface) / 0.65);
+    color: rgb(var(--color-ink) / 0.75);
+    font-size: 1.06rem;
+    padding-inline: 0.85rem;
+    transition:
+      border-color 0.25s var(--ease-luxury),
+      color 0.25s var(--ease-luxury),
+      box-shadow 0.25s var(--ease-luxury);
+  }
+
+  .bzr-cal-nav-btn:hover {
+    border-color: rgb(var(--color-accent) / 0.45);
+    color: rgb(var(--color-accent-deep));
+    box-shadow: 0 0 12px rgb(var(--color-accent) / 0.12);
+  }
+
+  [data-theme="dark"] .bzr-cal-nav-btn:hover {
+    color: rgb(var(--color-accent-bright));
+  }
+
+  .bzr-cal-cta {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.65rem;
+    padding: 0.5rem 1rem;
+    font-size: 1.06rem; /* +3px from 0.875rem */
+    font-weight: 600;
+    color: #15120a;
+    background: linear-gradient(
+      145deg,
+      rgb(var(--color-accent-bright)),
+      rgb(var(--color-accent))
+    );
+    box-shadow:
+      0 0 0 1px rgb(var(--color-accent) / 0.25),
+      0 0 18px rgb(var(--color-accent) / 0.22);
+    transition:
+      transform 0.25s var(--ease-luxury),
+      box-shadow 0.25s var(--ease-luxury);
+  }
+
+  .bzr-cal-cta:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 0 0 1px rgb(var(--color-accent) / 0.35),
+      0 0 26px rgb(var(--color-accent) / 0.32);
+  }
+
+  /* Hover tip — shaped like primary app buttons */
+  .bzr-cal-chip-wrap {
+    position: relative;
+    display: block;
+  }
+
+  .bzr-cal-chip-wrap:hover,
+  .bzr-cal-chip-wrap:focus-within {
+    z-index: 9;
+  }
+
+  .bzr-cal-daycard:has(.bzr-cal-chip-wrap:hover),
+  .bzr-cal-daycard:has(.bzr-cal-chip-wrap:focus-within) {
+    z-index: 8;
+  }
+
+  /* Portaled tip — fixed to viewport so calendar overflow never clips it */
+  .bzr-cal-tip {
+    pointer-events: none;
+    position: fixed;
+    z-index: 90;
+    min-width: 12.5rem;
+    max-width: 18rem;
+    border-radius: 0.78rem 1.35rem 0.78rem 1.35rem;
+    border: 1px solid rgb(255 232 139 / 0.55);
+    padding: 0.65rem 0.95rem;
+    color: #15120a;
+    background:
+      linear-gradient(
+        115deg,
+        rgb(255 235 145) 0%,
+        rgb(226 189 63) 33%,
+        rgb(187 139 25) 68%,
+        rgb(241 206 88) 100%
+      );
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.52),
+      inset 0 -1px 0 rgb(90 57 4 / 0.34),
+      0 12px 28px rgb(212 175 53 / 0.28),
+      0 0 18px rgb(212 175 53 / 0.16);
+  }
+
+  .bzr-cal-tip__row {
+    display: grid;
+    gap: 0.1rem;
+  }
+
+  .bzr-cal-tip__row + .bzr-cal-tip__row {
+    margin-top: 0.4rem;
+    padding-top: 0.4rem;
+    border-top: 1px solid rgb(90 57 4 / 0.18);
+  }
+
+  .bzr-cal-tip__label {
+    font-size: 0.81rem; /* +3px from 0.62rem */
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: rgb(60 42 8 / 0.72);
+  }
+
+  .bzr-cal-tip__value {
+    font-size: 0.99rem; /* +3px from 0.8rem */
+    font-weight: 650;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bzr-cal-cell,
+    .bzr-cal-chip-full,
+    .bzr-cal-cta {
+      transition: none;
+    }
+    .bzr-cal-chip-full:hover,
+    .bzr-cal-cta:hover {
+      transform: none;
+    }
+  }
+
+  /*
+    Visit detail overlay: content pane only (sidebar stays visible).
+    Tailwind lg:left-[19rem] on the root; reinforce here for cascade safety.
+  */
+  .bzr-field-visit-detail {
+    z-index: 50 !important;
+  }
+
+  @media (min-width: 1024px) {
+    body:has(.bzr-shell) .bzr-field-visit-detail {
+      left: 19rem !important;
+      width: auto !important;
+      right: 0 !important;
+    }
+  }
+
+  /* Clip each column so left metadata rows cannot paint over the select. */
+  .bzr-field-visit-detail .bzr-visit-detail-col {
+    min-width: 0;
+    max-width: 100%;
+    overflow-x: hidden;
+    isolation: isolate;
+  }
+
+  .bzr-field-visit-detail dd {
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   .bzr-search-submit {

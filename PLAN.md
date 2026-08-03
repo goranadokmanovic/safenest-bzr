@@ -42,7 +42,7 @@ SaaS za agencije BZR (bezbednost i zdravlje na radu): klijenti, zaposleni, rokov
 
 
 
-## Status po fazama (stanje: avg 2026, ažurirano 2026-08-01 — Zrna panel UX, fuzzy imena, owner copy)
+## Status po fazama (stanje: avg 2026, ažurirano 2026-08-03 — Zakazivanje kalendar, visit_type, konflikti, monthly report)
 
 
 
@@ -1422,5 +1422,61 @@ bookmark). FAB ima stilizovani tooltip (`components/ui/Tooltip.tsx`).
 - `public/zrna-shield.png`, `public/zrna-robot.png`
 
 *Poslednje ažuriranje: 2026-08-01 (Zrna shield/robot FAB, panel persist+expand, fuzzy imena, owner copy).*
+
+## Changelog 2026-08-03 — Zakazivanje, visit_type, konflikti, duration, monthly report
+
+### Tip posete (`visit_type`)
+| Stavka | Detalj |
+|--------|--------|
+| Migracija | `supabase/migrations/20260802120000_field_visits_visit_type.sql` — `initial \| periodic \| control \| extraordinary \| advisory` |
+| Pravilo | Kontrolna ⇔ `parent_visit_id`; broj naloga i dalje preko postojećeg triggera |
+| UI / API | Forma, `POST /api/field-visits`, sync, Zrna `createFieldVisit` (control → forma) |
+| Helper | `lib/field-visits/visit-type.ts` |
+
+### Konflikti rasporeda
+| Stavka | Detalj |
+|--------|--------|
+| Logika | `lib/field-visits/scheduling-conflicts.ts` — preklapanje radnika + isti klijent/dan; default trajanje 1h |
+| API | `GET/POST` soft warn + `acknowledge_conflicts`; `app/api/field-visits/scheduling-conflicts` |
+| UI / Zrna | Dialog na formi; ActionConfirmCard prikaz konflikata |
+
+### Duration
+| Stavka | Detalj |
+|--------|--------|
+| Forma | Prefill `"1"` sat (editabilno; prazno → 1h); nije hard-required blok |
+| Zrna | `duration_hours` na `createFieldVisit` + prikaz na ActionConfirmCard |
+| Metadata | `metadata.duration_hours` (0 &lt; h ≤ 24) |
+
+### Kalendar Zakazivanje (`/agencija/zakazivanje`)
+| Stavka | Detalj |
+|--------|--------|
+| Ruta | Nav „Zakazivanje”; Dan / Nedelja / Mesec; custom grid (bez FullCalendar) |
+| Opseg | Owner + collaborator: sve posete agencije; field_worker: svoje + shared-client |
+| Booked | Tamna ćelija + žuti glow; tačka + count; chipovi sa zlatnom ivicom |
+| Hover tip | Portaled zlatni tip (Klijent / Radnik), stil kao primary dugme |
+| Toolbar | Elipsasti toggle Dan / Nedelja / Mesec; isti dizajn ćelija u sva 3 prikaza |
+| Tema | Light theme kalendar forsira dark Zrna izgled; tekući mesec +2 / trailing +5 nijansi |
+| Deep-link | Chip → `/agencija/field-visits?visit=&scope=all&time=&from=zakazivanje` |
+| Modal | Portal na body, `left: 19rem` (sidebar vidljiv); Nazad → kalendar; bez flash-a liste |
+| API | `GET /api/field-visits/calendar` |
+
+### Zrna — mesečni izveštaj klijenta
+| Stavka | Detalj |
+|--------|--------|
+| Alat | `generateClientMonthlyReport` (read) — posete u mesecu + compliance expiry u mesecu |
+| Narrative | Poseban `gpt-4o-mini` poziv; `narrative: null` pri neuspehu; locale iz `ctx.locale` |
+| Excel | ExcelJS workbook (`lib/agent/monthly-report-workbook.ts`) |
+| UI | `MonthlyReportPanel` u ToolTrace — tabele + Download Excel |
+
+### Ključni fajlovi
+- `app/agencija/zakazivanje/page.tsx`, `components/agencija/SchedulingCalendar.tsx`
+- `lib/field-visits/scheduling-calendar.ts`, `scheduling-conflicts.ts`, `visit-type.ts`
+- `lib/queries/client-monthly-report.ts`, `lib/agent/tools/generate-client-monthly-report.ts`
+- `components/field-visits/FieldVisitsList.tsx`, `FieldVisitsModal.tsx`, `FieldVisitForm.tsx`
+- `supabase/migrations/20260802120000_field_visits_visit_type.sql`
+
+**Napomena:** migraciju `visit_type` primeniti u Supabase ako još nije.
+
+*Poslednje ažuriranje: 2026-08-03 (Zakazivanje kalendar UX, visit_type, konflikti, duration, monthly report).*
 
 

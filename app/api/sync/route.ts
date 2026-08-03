@@ -9,6 +9,11 @@ import { withApiCatch } from "@/lib/api/with-api-catch";
 import type { SyncItemResult } from "@/lib/offline/types";
 import { normalizeVisitStatus } from "@/lib/field-visits/display";
 import { getDelegatedFromUserIds } from "@/lib/field-visits/control-visits";
+import { findSchedulingConflicts } from "@/lib/field-visits/scheduling-conflicts";
+import {
+  isVisitType,
+  resolveVisitTypeAndParent,
+} from "@/lib/field-visits/visit-type";
 import { generateEmbedding, buildVisitEmbeddingText } from "@/lib/api/embeddings";
 import { z } from "zod";
 
@@ -35,7 +40,9 @@ const TABLE_CONFIG: Record<
       "report_template_id",
       "hitno_otklanjanje",
       "parent_visit_id",
+      "visit_type",
       // broj_naloga dodeljuje DB trigger — ne prihvata se sa klijenta
+      // acknowledge_conflicts nije DB kolona — čita se iz raw data
     ],
   },
   risk_assessments: {
@@ -280,8 +287,27 @@ export const POST = withApiCatch(async (request: Request) => {
                 : undefined,
           );
           insertPayload.hitno_otklanjanje = raw.hitno_otklanjanje === true;
-          if (typeof raw.parent_visit_id === "string" && raw.parent_visit_id) {
-            const parentId = raw.parent_visit_id;
+
+          const typeResolved = resolveVisitTypeAndParent({
+            visitType: isVisitType(raw.visit_type) ? raw.visit_type : undefined,
+            parentVisitId:
+              typeof raw.parent_visit_id === "string"
+                ? raw.parent_visit_id
+                : null,
+          });
+          if (!typeResolved.ok) {
+            results.push({
+              id: item.id,
+              ok: false,
+              error: typeResolved.message,
+              code: "VALIDATION_ERROR",
+            });
+            continue;
+          }
+          insertPayload.visit_type = typeResolved.visit_type;
+
+          if (typeResolved.parent_visit_id) {
+            const parentId = typeResolved.parent_visit_id;
             const { data: parent } = await supabase
               .from("field_visits")
               .select("id, agency_id, assigned_user_id")
@@ -321,8 +347,38 @@ export const POST = withApiCatch(async (request: Request) => {
           } else {
             delete insertPayload.parent_visit_id;
           }
+
+          const assignedForConflict =
+            (typeof insertPayload.assigned_user_id === "string"
+              ? insertPayload.assigned_user_id
+              : null) ?? user.id;
+          const durationForConflict =
+            typeof meta.duration_hours === "number"
+              ? meta.duration_hours
+              : null;
+          if (raw.acknowledge_conflicts !== true) {
+            const conflicts = await findSchedulingConflicts(supabase, {
+              agencyId,
+              clientCompanyId: String(insertPayload.client_company_id ?? ""),
+              assignedUserId: assignedForConflict,
+              scheduledAt: String(insertPayload.scheduled_at),
+              durationHours: durationForConflict,
+            });
+            if (conflicts.has_conflicts) {
+              results.push({
+                id: item.id,
+                ok: false,
+                error:
+                  "Pronađen je konflikt u rasporedu. Potvrdi zakazivanje ili izmeni termin.",
+                code: "SCHEDULING_CONFLICT",
+              });
+              continue;
+            }
+          }
+
           // broj_naloga uvek dodeljuje DB trigger (N/YY ili N-k/YY)
           delete insertPayload.broj_naloga;
+          delete insertPayload.acknowledge_conflicts;
         }
         const row: Record<string, unknown> = {
           ...insertPayload,

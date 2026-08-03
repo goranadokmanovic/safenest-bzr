@@ -3,6 +3,7 @@ import { getUpcomingDeadlines } from "@/lib/agent/tools/get-upcoming-deadlines";
 import { getEmployeesWithoutComplianceRecords } from "@/lib/agent/tools/get-employees-without-records";
 import { getClientSummary } from "@/lib/agent/tools/get-client-summary";
 import { getMyAssignedClients } from "@/lib/agent/tools/get-my-assigned-clients";
+import { generateClientMonthlyReport } from "@/lib/agent/tools/generate-client-monthly-report";
 import { searchFieldVisits } from "@/lib/agent/tools/search-field-visits";
 import { createFieldVisit } from "@/lib/agent/tools/create-field-visit";
 import { updateComplianceRecordExpiry } from "@/lib/agent/tools/update-compliance-expiry";
@@ -24,6 +25,7 @@ const READ_TOOLS: readonly AgentTool[] = [
   getEmployeesWithoutComplianceRecords,
   getClientSummary,
   getMyAssignedClients,
+  generateClientMonthlyReport,
   searchFieldVisits,
 ];
 

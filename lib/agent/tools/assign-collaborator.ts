@@ -128,9 +128,14 @@ export const assignCollaboratorToClient: AgentTool = {
         collaborators.find((c) => c.user_id === previousId)?.full_name ?? null;
     }
 
-    const summary = previousName
-      ? `Dodela saradnika: ${clientArg.client.name} — ${previousName} → ${collabArg.worker.full_name}`
-      : `Dodela saradnika: ${clientArg.client.name} → ${collabArg.worker.full_name}`;
+    const summary =
+      ctx.locale === "en"
+        ? previousName
+          ? `Assign collaborator: ${clientArg.client.name} — ${previousName} → ${collabArg.worker.full_name}`
+          : `Assign collaborator: ${clientArg.client.name} → ${collabArg.worker.full_name}`
+        : previousName
+          ? `Dodela saradnika: ${clientArg.client.name} — ${previousName} → ${collabArg.worker.full_name}`
+          : `Dodela saradnika: ${clientArg.client.name} → ${collabArg.worker.full_name}`;
 
     return {
       ok: true,

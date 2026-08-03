@@ -69,7 +69,7 @@ export function AssistantChat({
   autoFocus?: boolean;
   inputId?: string;
 } = {}) {
-  const { m } = useTranslations();
+  const { m, locale } = useTranslations();
   const a = m.dashboard.assistant;
   const compact = variant === "panel";
   const persistPanel = variant === "panel";
@@ -157,7 +157,7 @@ export function AssistantChat({
         const res = await fetch("/api/assistant/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: payload }),
+          body: JSON.stringify({ messages: payload, locale }),
         });
 
         const json = (await res.json().catch(() => ({}))) as {
@@ -193,7 +193,7 @@ export function AssistantChat({
         inputRef.current?.focus();
       }
     },
-    [entries, loading, m.common.error, m.common.networkError],
+    [entries, loading, locale, m.common.error, m.common.networkError],
   );
 
   function handleSubmit(e: React.FormEvent) {

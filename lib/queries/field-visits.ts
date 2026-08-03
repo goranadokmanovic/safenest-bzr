@@ -27,6 +27,8 @@ export type ResolvedPeriod = {
   label: string;
 };
 
+export type PeriodLocale = "sr" | "en";
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const MONTH_NAMES_SR = [
@@ -44,8 +46,34 @@ const MONTH_NAMES_SR = [
   "decembar",
 ];
 
+const MONTH_NAMES_EN = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 function lastDayOfMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
+}
+
+function monthPeriodLabel(
+  year: number,
+  month: number,
+  locale: PeriodLocale,
+): string {
+  if (locale === "en") {
+    return `${MONTH_NAMES_EN[month - 1]} ${year}`;
+  }
+  return `${MONTH_NAMES_SR[month - 1]} ${year}.`;
 }
 
 /**
@@ -55,6 +83,7 @@ function lastDayOfMonth(year: number, month: number): number {
 export function resolvePeriod(
   input: PeriodInput,
   todayIso: string = todayBelgradeIso(),
+  locale: PeriodLocale = "sr",
 ): QueryResult<ResolvedPeriod> {
   const currentYear = Number(todayIso.slice(0, 4));
 
@@ -94,7 +123,7 @@ export function resolvePeriod(
       value: {
         from: `${year}-${mm}-01`,
         to: `${year}-${mm}-${String(last).padStart(2, "0")}`,
-        label: `${MONTH_NAMES_SR[month! - 1]} ${year}.`,
+        label: monthPeriodLabel(year, month!, locale),
       },
     };
   }
@@ -114,7 +143,8 @@ export function resolvePeriod(
     value: {
       from: `${year}-${String(startMonth).padStart(2, "0")}-01`,
       to: `${year}-${String(endMonth).padStart(2, "0")}-${String(last).padStart(2, "0")}`,
-      label: `Q${quarter} ${year}.`,
+      label:
+        locale === "en" ? `Q${quarter} ${year}` : `Q${quarter} ${year}.`,
     },
   };
 }

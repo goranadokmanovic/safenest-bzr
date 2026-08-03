@@ -330,7 +330,22 @@ export async function resolveComplianceRecordArg(
   return { kind: "one", record: matches[0]! };
 }
 
-export function recordTypeLabel(type: ComplianceRecordType): string {
+export function recordTypeLabel(
+  type: ComplianceRecordType,
+  locale: "sr" | "en" = "sr",
+): string {
+  if (locale === "en") {
+    switch (type) {
+      case "medical_exam":
+        return "Medical exam";
+      case "training_certification":
+        return "Training / certification";
+      case "equipment_check":
+        return "Equipment check";
+      default:
+        return type;
+    }
+  }
   switch (type) {
     case "medical_exam":
       return "Lekarski pregled";

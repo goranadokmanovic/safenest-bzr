@@ -16,6 +16,24 @@ export type PendingCreateFieldVisit = {
     client_name: string;
     worker_name: string;
     scheduled_at_label: string;
+    visit_type_label?: string;
+    duration_hours_label?: string;
+    conflicts?: {
+      worker_overlaps: Array<{
+        broj_naloga: string | null;
+        scheduled_at: string;
+        client_name: string | null;
+        assigned_user_name: string | null;
+        kind: string;
+      }>;
+      client_same_day: Array<{
+        broj_naloga: string | null;
+        scheduled_at: string;
+        client_name: string | null;
+        assigned_user_name: string | null;
+        kind: string;
+      }>;
+    } | null;
   };
   execute: PendingActionExecute & {
     method: "POST";

@@ -16,6 +16,8 @@ import {
   parseFieldVisitListFilters,
 } from "@/lib/field-visits/list";
 import { getDelegatedFromUserIds } from "@/lib/field-visits/control-visits";
+import { findSchedulingConflicts } from "@/lib/field-visits/scheduling-conflicts";
+import { resolveVisitTypeAndParent } from "@/lib/field-visits/visit-type";
 import { notifyFieldVisitAssigned } from "@/lib/field-visits/notify-assigned";
 
 export const GET = withApiCatch(async (request: Request) => {
@@ -77,7 +79,15 @@ export const POST = withApiCatch(async (request: Request) => {
   if (!scope.ok) return scope.response;
   const client = scope.client;
 
-  const parentVisitId: string | null = parsed.data.parent_visit_id ?? null;
+  const typeResolved = resolveVisitTypeAndParent({
+    visitType: parsed.data.visit_type,
+    parentVisitId: parsed.data.parent_visit_id,
+  });
+  if (!typeResolved.ok) {
+    return jsonError(typeResolved.message, 400, { code: "VALIDATION_ERROR" });
+  }
+  const parentVisitId = typeResolved.parent_visit_id;
+
   if (parentVisitId) {
     const { data: parent } = await supabase
       .from("field_visits")
@@ -109,11 +119,42 @@ export const POST = withApiCatch(async (request: Request) => {
     }
   }
 
+  const scheduledAt =
+    parsed.data.scheduled_at ?? new Date().toISOString();
+  const assignedUserId = parsed.data.assigned_user_id ?? user.id;
+  const durationHours =
+    typeof parsed.data.metadata?.duration_hours === "number"
+      ? parsed.data.metadata.duration_hours
+      : null;
+
+  if (parsed.data.acknowledge_conflicts !== true) {
+    const conflicts = await findSchedulingConflicts(supabase, {
+      agencyId: client.agency_id,
+      clientCompanyId: parsed.data.client_company_id,
+      assignedUserId,
+      scheduledAt,
+      durationHours,
+    });
+    if (conflicts.has_conflicts) {
+      return jsonError(
+        "Pronađen je konflikt u rasporedu. Pregledaj konflikte i potvrdi zakazivanje.",
+        409,
+        {
+          code: "SCHEDULING_CONFLICT",
+          conflicts: {
+            worker_overlaps: conflicts.worker_overlaps,
+            client_same_day: conflicts.client_same_day,
+          },
+        },
+      );
+    }
+  }
+
   const row = {
     agency_id: client.agency_id,
     client_company_id: parsed.data.client_company_id,
-    assigned_user_id: parsed.data.assigned_user_id ?? user.id,
-    scheduled_at: parsed.data.scheduled_at ?? new Date().toISOString(),
+    assigned_user_id: assignedUserId,
+    scheduled_at: scheduledAt,
     started_at: parsed.data.started_at ?? null,
     completed_at: parsed.data.completed_at ?? null,
     status: parsed.data.status ?? "draft",
@@ -123,6 +164,7 @@ export const POST = withApiCatch(async (request: Request) => {
     metadata: parsed.data.metadata ?? {},
     hitno_otklanjanje: parsed.data.hitno_otklanjanje === true,
     parent_visit_id: parentVisitId,
+    visit_type: typeResolved.visit_type,
   };
 
   const { data, error } = await supabase

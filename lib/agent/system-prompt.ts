@@ -3,6 +3,7 @@ import {
   canMutateAgencyRecords,
   canMutateFieldRecords,
 } from "@/lib/api/session";
+import type { Locale } from "@/lib/i18n/types";
 
 export type SystemPromptContext = {
   profile: AuthProfile;
@@ -10,6 +11,8 @@ export type SystemPromptContext = {
   todayIso: string;
   /** true kada je korisnik saradnik sa suženim opsegom klijenata. */
   scopedToAssignedClients: boolean;
+  /** Jezik UI-ja (sr/en) — fallback kad jezik poruke nije jasan. */
+  locale: Locale;
 };
 
 function roleLabel(role: string): string {
@@ -67,10 +70,28 @@ function writeCapabilities(profile: AuthProfile): string[] {
  * Datum se ubacuje eksplicitno jer model inače pogađa relativne izraze
  * („prošlog meseca”, „ovog kvartala”) na osnovu podataka iz treninga.
  */
+function languageRules(locale: Locale): string[] {
+  const uiLanguage =
+    locale === "en" ? "English (en)" : "Serbian, Latin script (sr)";
+
+  return [
+    "JEZIK / LANGUAGE (obavezno):",
+    `- UI language: ${uiLanguage}.`,
+    "- Always reply in the same language as the user's most recent message.",
+    "- If the latest user message language is unclear, fall back to the UI language above.",
+    "- Do not switch to Serbian merely because earlier turns in this chat, tool hints, or this system prompt are in Serbian.",
+    locale === "en"
+      ? "- When UI language is English and the latest user message is in English, reply fully in English (including summaries of tool results)."
+      : "- When UI language is Serbian (or the latest user message is in Serbian), reply in Serbian, Latin script.",
+    "",
+  ];
+}
+
 export function buildSystemPrompt(ctx: SystemPromptContext): string {
   const lines: string[] = [
     "Ti si Zrna, asistent u aplikaciji Bez Zrna Rizika (SafeNest BZR), softveru za bezbednost i zdravlje na radu koji koriste srpske BZR agencije. Kad se predstavljaš, koristi ime Zrna.",
     "",
+    ...languageRules(ctx.locale),
     "KONTEKST:",
     `- Danas je ${ctx.todayIso} (vremenska zona Europe/Belgrade).`,
     `- Korisnik je ${roleLabel(ctx.profile.role)}${
@@ -82,9 +103,9 @@ export function buildSystemPrompt(ctx: SystemPromptContext): string {
       : "- Korisnik vidi sve klijente svoje agencije.",
     "",
     "KAKO ODGOVARAŠ:",
-    "- Piši na jeziku kojim ti se korisnik obraća; podrazumevano srpski, latinica.",
     "- Kratko i konkretno. Brojke i datume navodi tačno onako kako ih alat vrati.",
     "- Datume prikazuj u formatu DD.MM.GGGG.",
+    "- Tool hints and this system prompt may be in Serbian — paraphrase into the reply language; do not copy their language blindly.",
     "",
     "PRAVILA ZA PODATKE:",
     "- Nikada ne izmišljaj brojeve, imena, datume ni nazive klijenata. Sve što tvrdiš mora doći iz rezultata alata.",
@@ -104,6 +125,7 @@ export function buildSystemPrompt(ctx: SystemPromptContext): string {
     ctx.profile.role === "agency_collaborator"
       ? "- 'Moji klijenti' / 'za koliko sam zadužen' → getMyAssignedClients. Za „zadužen” koristi assigned_count (stroga dodela). Ako alat vrati visit_only_count > 0, možeš dodati da još toliko klijenata vidiš preko poseta — ne mešaj ta dva broja. Ne koristi reč „opseg” u odgovoru korisniku."
       : "- 'Moji klijenti' / 'koliko klijenata imam' / 'za koliko sam zadužen' → getMyAssignedClients. Koristi client_count. Formuliši prirodno (npr. „Tvoja agencija ima N klijenata” / „Vodite N klijenata”). Ne pominji zaduženje, opseg ni razliku assigned/visit — to važi samo za saradnike.",
+    "- 'Mesečni izveštaj' / 'monthly report' za imenovanog klijenta → generateClientMonthlyReport (client_name, month 1–12, year ili null). Drži chat odgovor KRATKO (1–3 rečenice): ukratko sažmi ili parafraziraj `narrative` ako postoji, pomeni ukupan broj poseta i compliance. NEMOJ paste-ovati tabele poseta/compliance u prozi — UI ispod poruke prikazuje tabele i dugme za Excel. Ne izmišljaj posete ni rokove. Za opšti pregled klijenta bez meseca koristi getClientSummary.",
     "",
     ...writeCapabilities(ctx.profile),
     "",

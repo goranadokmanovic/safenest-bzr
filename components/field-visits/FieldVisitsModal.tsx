@@ -1,6 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useTranslations } from "@/components/i18n/locale-provider";
 import {
   formatDurationHours,
@@ -51,6 +53,8 @@ type Props = {
   agencyName?: string;
   currentUserId?: string | null;
   canManageTeam?: boolean;
+  /** Ako je setovan (npr. iz kalendara), prikaži Nazad i zatvaranje vodi tamo. */
+  backHref?: string | null;
 };
 
 function normalizeStatus(value: unknown): TranscriptStatus {
@@ -192,10 +196,19 @@ export function FieldVisitsModal({
   agencyName,
   currentUserId: _currentUserId,
   canManageTeam,
+  backHref = null,
 }: Props) {
   const { m, locale } = useTranslations();
   const router = useRouter();
   const fv = m.dashboard.fieldVisits;
+
+  function handleDismiss() {
+    if (backHref) {
+      router.push(backHref);
+      return;
+    }
+    onClose();
+  }
   const ff = fv.form;
   const meta = row.metadata ?? {};
   const syncStatus = normalizeSyncStatus(row.sync_status, row.isLocal);
@@ -261,14 +274,32 @@ export function FieldVisitsModal({
     loadedUpdatedAtRef.current = loadedUpdatedAt;
   }, [loadedUpdatedAt]);
 
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  /* Portal na body — inače sidebar (z-60) prekriva levi stubac jer je
+     shell-main stacking context samo z-1 (isti razlog kao Zrna / import dialog). */
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
   /* Prikaz zauzima celu stranicu — Escape je najbrži izlaz. */
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (event.key === "Escape") {
+        if (backHref) router.push(backHref);
+        else onClose();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  }, [onClose, backHref, router]);
 
   function applyLockPayload(payload: LockPayload) {
     if (payload.report_lock_status !== undefined) {
@@ -608,9 +639,11 @@ export function FieldVisitsModal({
   const reportEditable =
     reportStatus !== "processing" && reportStatus !== "skipped";
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-[70] flex flex-col bg-bg"
+      className="bzr-field-visit-detail fixed inset-0 z-[50] flex flex-col bg-bg lg:left-[19rem]"
       role="dialog"
       aria-modal="true"
       aria-labelledby="field-visit-modal-title"
@@ -618,6 +651,11 @@ export function FieldVisitsModal({
       <div className="flex min-h-0 flex-1 flex-col print:hidden">
         <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border/30 px-5 py-4 sm:px-7">
           <div className="min-w-0">
+            {backHref ? (
+              <Link href={backHref} className="bzr-back mb-2 inline-flex">
+                {fv.backToCalendar}
+              </Link>
+            ) : null}
             <h3
               id="field-visit-modal-title"
               className="font-display text-xl font-semibold leading-tight text-ink"
@@ -643,12 +681,16 @@ export function FieldVisitsModal({
                 {m.common.delete}
               </button>
             ) : null}
-            <button type="button" onClick={onClose} className="bzr-btn-ghost">
+            <button
+              type="button"
+              onClick={handleDismiss}
+              className="bzr-btn-ghost"
+            >
               {fv.close}
             </button>
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleDismiss}
               aria-label={fv.close}
               className="flex h-9 w-9 items-center justify-center rounded-full border border-border/40 text-xl leading-none text-ink/60 hover:bg-ink/5 hover:text-ink"
             >
@@ -657,35 +699,33 @@ export function FieldVisitsModal({
           </div>
         </header>
 
-        <div className="grid min-h-0 flex-1 gap-6 overflow-hidden px-5 py-5 sm:px-7 lg:grid-cols-2 xl:grid-cols-3">
-          <section className="min-h-0 overflow-y-auto pr-1">
+        <div className="grid min-h-0 min-w-0 flex-1 gap-8 overflow-hidden px-6 py-5 sm:px-10 lg:grid-cols-2 lg:gap-12 xl:grid-cols-3 xl:gap-14">
+          <section className="bzr-visit-detail-col min-h-0 min-w-0 overflow-auto overscroll-contain pr-2">
             <dl className="space-y-1.5 text-sm">
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">
                   {fv.detailBrojNaloga}
                 </dt>
-                <dd className="font-medium tabular-nums">
+                <dd className="min-w-0 font-medium tabular-nums">
                   {row.broj_naloga ?? m.common.noData}
                 </dd>
               </div>
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
-                  {fv.detailClient}
-                </dt>
-                <dd>{row.client_name ?? m.common.noData}</dd>
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">{fv.detailClient}</dt>
+                <dd className="min-w-0">{row.client_name ?? m.common.noData}</dd>
               </div>
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
-                  {fv.detailIndustry}
-                </dt>
-                <dd>{row.client_industry ?? m.common.noData}</dd>
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">{fv.detailIndustry}</dt>
+                <dd className="min-w-0">
+                  {row.client_industry ?? m.common.noData}
+                </dd>
               </div>
               {row.parent_visit_id ? (
-                <div className="flex gap-2 border-b border-ink/10 py-1">
-                  <dt className="w-36 shrink-0 font-medium text-ink/70">
+                <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                  <dt className="font-medium text-ink/70">
                     {fv.detailControlOf}
                   </dt>
-                  <dd>
+                  <dd className="min-w-0">
                     {onOpenParentVisit ? (
                       <button
                         type="button"
@@ -710,11 +750,11 @@ export function FieldVisitsModal({
                   </dd>
                 </div>
               ) : null}
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">
                   {fv.detailHitnoOtklanjanje}
                 </dt>
-                <dd>
+                <dd className="min-w-0">
                   {row.hitno_otklanjanje ? (
                     <span className="font-semibold text-red-800">
                       {fv.filterHitnoYes}
@@ -724,45 +764,41 @@ export function FieldVisitsModal({
                   )}
                 </dd>
               </div>
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
-                  {fv.detailRisk}
-                </dt>
-                <dd>{risk ? <RiskBadge level={risk} /> : m.common.noData}</dd>
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">{fv.detailRisk}</dt>
+                <dd className="min-w-0">
+                  {risk ? <RiskBadge level={risk} /> : m.common.noData}
+                </dd>
               </div>
               {row.isLocal ? (
-                <div className="flex gap-2 border-b border-ink/10 py-1">
-                  <dt className="w-36 shrink-0 font-medium text-ink/70">
+                <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                  <dt className="font-medium text-ink/70">
                     {fv.detailAssignedUser}
                   </dt>
-                  <dd>
+                  <dd className="min-w-0">
                     {row.assigned_user_name ??
                       row.assigned_user_id?.slice(0, 8) ??
                       m.common.noData}
                   </dd>
                 </div>
               ) : null}
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">
                   {fv.detailVisitStatus}
                 </dt>
-                <dd>
+                <dd className="min-w-0">
                   <VisitStatusBadge status={visitStatus} />
                 </dd>
               </div>
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
-                  {fv.detailSync}
-                </dt>
-                <dd>
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">{fv.detailSync}</dt>
+                <dd className="min-w-0">
                   <SyncStatusBadge status={syncStatus} />
                 </dd>
               </div>
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
-                  {fv.detailDuration}
-                </dt>
-                <dd>
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">{fv.detailDuration}</dt>
+                <dd className="min-w-0">
                   {formatDurationHours(meta, fv.hoursSuffix, {
                     started_at: row.started_at,
                     completed_at: row.completed_at,
@@ -772,31 +808,31 @@ export function FieldVisitsModal({
                       : m.common.noData)}
                 </dd>
               </div>
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
-                  {fv.detailScheduled}
-                </dt>
-                <dd>{formatVisitDate(row.scheduled_at, locale)}</dd>
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">{fv.detailScheduled}</dt>
+                <dd className="min-w-0">
+                  {formatVisitDate(row.scheduled_at, locale)}
+                </dd>
               </div>
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
-                  {fv.detailStarted}
-                </dt>
-                <dd>{formatVisitDate(row.started_at, locale)}</dd>
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">{fv.detailStarted}</dt>
+                <dd className="min-w-0">
+                  {formatVisitDate(row.started_at, locale)}
+                </dd>
               </div>
-              <div className="flex gap-2 border-b border-ink/10 py-1">
-                <dt className="w-36 shrink-0 font-medium text-ink/70">
-                  {fv.detailCompleted}
-                </dt>
-                <dd>{formatVisitDate(row.completed_at, locale)}</dd>
+              <div className="grid grid-cols-[7.5rem_minmax(0,1fr)] gap-x-2 border-b border-ink/10 py-1">
+                <dt className="font-medium text-ink/70">{fv.detailCompleted}</dt>
+                <dd className="min-w-0">
+                  {formatVisitDate(row.completed_at, locale)}
+                </dd>
               </div>
             </dl>
           </section>
 
-          <section className="min-h-0 overflow-y-auto pr-1">
+          <section className="bzr-visit-detail-col min-h-0 min-w-0 overflow-auto overscroll-contain border-l border-border/25 pl-6 pr-2 lg:pl-8">
             <dl className="space-y-5 text-sm">
               {!row.isLocal ? (
-                <div>
+                <div className="relative z-10">
                   <VisitTeamPanel
                     visitId={row.id}
                     assignees={
@@ -846,7 +882,7 @@ export function FieldVisitsModal({
             </dl>
           </section>
 
-          <section className="min-h-0 overflow-y-auto pr-1">
+          <section className="bzr-visit-detail-col min-h-0 min-w-0 overflow-auto overscroll-contain border-l border-border/25 pl-6 pr-2 lg:pl-8">
             <dl className="space-y-5 text-sm">
               {showAudioSection ? (
                 <div className="py-2">
@@ -1244,6 +1280,7 @@ export function FieldVisitsModal({
           noData: m.common.noData,
         }}
       />
-    </div>
+    </div>,
+    document.body,
   );
 }

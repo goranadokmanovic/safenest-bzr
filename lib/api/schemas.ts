@@ -234,6 +234,17 @@ export const fieldVisitCreateSchema = z.object({
   notes: z.string().max(10000).nullable().optional(),
   hitno_otklanjanje: z.boolean().optional(),
   parent_visit_id: z.string().uuid().nullable().optional(),
+  visit_type: z
+    .enum([
+      "initial",
+      "periodic",
+      "control",
+      "extraordinary",
+      "advisory",
+    ])
+    .optional(),
+  /** Soft conflict override — bez ovoga API vraća 409 SCHEDULING_CONFLICT. */
+  acknowledge_conflicts: z.boolean().optional(),
   metadata: z
     .object({
       duration_hours: z.number().min(0).max(24).nullable().optional(),

@@ -92,7 +92,11 @@ export const getVisitCountByAgencyUser: AgentTool = {
       return { ok: false, error: "Neispravni argumenti za getVisitCountByAgencyUser." };
     }
 
-    const period = resolvePeriod(parsed.data as PeriodInput, ctx.todayIso);
+    const period = resolvePeriod(
+      parsed.data as PeriodInput,
+      ctx.todayIso,
+      ctx.locale,
+    );
     if (!period.ok) {
       return { ok: false, error: period.message };
     }

@@ -146,6 +146,38 @@ export function isUpcomingFieldVisit(
   return t >= nowMs;
 }
 
+/** Deep-link sa kalendara / spoljnih linkova → lista + auto-open modal. */
+export function fieldVisitsListHref(input: {
+  visitId: string;
+  scheduledAt: string;
+  status: string;
+  basePath?: string;
+  /** Poreklo linka — koristi se za dugme Nazad (npr. kalendar). */
+  from?: "zakazivanje";
+}): string {
+  const time: FieldVisitListTime = isUpcomingFieldVisit(
+    input.scheduledAt,
+    input.status,
+  )
+    ? "upcoming"
+    : "history";
+  const params = new URLSearchParams({
+    visit: input.visitId,
+    scope: "all",
+    time,
+  });
+  if (input.from) params.set("from", input.from);
+  return `${input.basePath ?? "/agencija/field-visits"}?${params.toString()}`;
+}
+
+/** Resolve return path for visit deep-links (`?from=`). */
+export function fieldVisitReturnHref(
+  from: string | null | undefined,
+): string | null {
+  if (from === "zakazivanje") return "/agencija/zakazivanje";
+  return null;
+}
+
 /**
  * Lista terenskih poseta sa tab scope + AND filterima.
  * Napomena: risk_level živi u metadata (nije top-level kolona).

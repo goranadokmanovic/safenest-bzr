@@ -18,6 +18,7 @@ export function AgencyShell({
     { href: "/dashboard", label: m.common.dashboard, exact: true },
     { href: "/agencija/klijenti", label: m.agencija.nav.clients },
     { href: "/agencija/field-visits", label: m.agencija.nav.fieldVisits },
+    { href: "/agencija/zakazivanje", label: m.agencija.nav.scheduling },
     { href: "/agencija/pretraga", label: m.agencija.nav.search },
     ...(canManageTemplates
       ? [
@@ -32,15 +33,19 @@ export function AgencyShell({
   ];
 
   return (
-    <AppShell
-      homeHref="/dashboard"
-      title=""
-      subtitle="Bez Zrna Rizika"
-      links={links}
-      footerLinks={[{ href: "/", label: "Početna" }]}
-    >
-      {children}
+    <>
+      <AppShell
+        homeHref="/dashboard"
+        title=""
+        subtitle="Bez Zrna Rizika"
+        links={links}
+        footerLinks={[{ href: "/", label: "Početna" }]}
+      >
+        {children}
+      </AppShell>
+      {/* Sibling of AppShell so fixed chat escapes .bzr-shell-main (z-1)
+          and can stack above the sidebar (z-60) when expanded. */}
       <ZrnaFloatingChat />
-    </AppShell>
+    </>
   );
 }

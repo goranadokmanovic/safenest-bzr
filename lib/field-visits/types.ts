@@ -1,3 +1,7 @@
+import type { VisitType } from "@/lib/field-visits/visit-type";
+
+export type { VisitType } from "@/lib/field-visits/visit-type";
+
 /** Dozvoljene vrednosti enum field_visit_status u bazi */
 export type FieldVisitStatus =
   | "draft"
@@ -49,6 +53,7 @@ export type FieldVisit = {
   broj_naloga: string;
   hitno_otklanjanje: boolean;
   parent_visit_id: string | null;
+  visit_type: VisitType;
 };
 
 /** Payload za kreiranje posete (POST /api/field-visits ili offline sync) */
@@ -66,6 +71,9 @@ export type FieldVisitInsertPayload = {
   report_template_id?: string | null;
   hitno_otklanjanje?: boolean;
   parent_visit_id?: string | null;
+  visit_type?: VisitType;
+  /** Samo transport do API/sync — nije DB kolona. */
+  acknowledge_conflicts?: boolean;
 };
 
 /** Fotografija terenske posete za prikaz u UI (server ili lokalno). */

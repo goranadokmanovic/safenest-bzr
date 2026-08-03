@@ -13,12 +13,6 @@ import {
   subscribeZrnaPanelOpen,
 } from "@/lib/agent/zrna-panel-chat-store";
 
-function isNavigationClick(target: EventTarget | null): boolean {
-  if (!(target instanceof Element)) return false;
-  // Next <Link>, anchors, clickable rows (router.push), in-page tabs (router.replace).
-  return !!target.closest('a[href], [role="link"], [role="tab"]');
-}
-
 function ExpandIcon({ expanded }: { expanded: boolean }) {
   if (expanded) {
     // Collapse / minimize (arrows inward)
@@ -85,7 +79,6 @@ export function ZrnaFloatingChat() {
   const setOpen = setZrnaPanelOpen;
   const [expanded, setExpanded] = useState(false);
 
-  const panelRef = useRef<HTMLDivElement | null>(null);
   const fabRef = useRef<HTMLButtonElement | null>(null);
 
   function closePanel() {
@@ -101,43 +94,31 @@ export function ZrnaFloatingChat() {
   useEffect(() => {
     if (!open || hideFab) return;
 
-    function dismiss() {
+    function onKey(ev: KeyboardEvent) {
+      if (ev.key !== "Escape") return;
       setExpanded(false);
       setOpen(false);
       fabRef.current?.focus();
     }
 
-    function onKey(ev: KeyboardEvent) {
-      if (ev.key !== "Escape") return;
-      dismiss();
-    }
-
-    function onPointerDown(ev: MouseEvent) {
-      const target = ev.target as Node | null;
-      if (!target) return;
-      if (panelRef.current?.contains(target)) return;
-      if (fabRef.current?.contains(target)) return;
-      // Navigacija (sidebar, redovi-linke, tabovi) ne sme da zatvori panel.
-      if (isNavigationClick(ev.target)) return;
-      dismiss();
-    }
-
     window.addEventListener("keydown", onKey);
-    document.addEventListener("mousedown", onPointerDown);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      document.removeEventListener("mousedown", onPointerDown);
-    };
+    return () => window.removeEventListener("keydown", onKey);
   }, [open, hideFab, setOpen]);
 
   if (hideFab) return null;
 
   const panelShellClass = expanded
-    ? "pointer-events-auto fixed inset-3 z-[60] flex flex-col overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-[0_16px_48px_rgb(0_0_0/0.35),0_0_0_1px_rgb(var(--color-accent)/0.08)] sm:inset-4"
+    ? "pointer-events-auto fixed inset-3 z-[70] flex flex-col overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-[0_16px_48px_rgb(0_0_0/0.35),0_0_0_1px_rgb(var(--color-accent)/0.08)] sm:inset-4"
     : "pointer-events-auto relative z-10 flex h-[min(85vh,48.75rem)] w-[min(100vw-1.5rem,26rem)] flex-col overflow-hidden rounded-2xl border border-accent/25 bg-surface shadow-[0_16px_48px_rgb(0_0_0/0.35),0_0_0_1px_rgb(var(--color-accent)/0.08)]";
 
   return (
-    <div className="pointer-events-none fixed bottom-5 right-5 z-[60] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6">
+    <div
+      className={
+        expanded
+          ? "pointer-events-none fixed bottom-5 right-5 z-[70] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6"
+          : "pointer-events-none fixed bottom-5 right-5 z-[60] flex flex-col items-end gap-3 sm:bottom-6 sm:right-6"
+      }
+    >
       {/* Keep mounted when closed so in-flight requests + store-backed UI stay warm. */}
       <div
         className={
@@ -162,7 +143,6 @@ export function ZrnaFloatingChat() {
         ) : null}
 
         <div
-          ref={panelRef}
           role="dialog"
           aria-modal={expanded}
           aria-hidden={!open}

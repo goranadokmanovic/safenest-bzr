@@ -15,23 +15,70 @@ function DisplayRows({ action }: { action: PendingAction }) {
   const c = m.dashboard.assistant.confirm;
 
   if (action.kind === "createFieldVisit") {
+    const conflicts = action.display.conflicts;
+    const conflictRows = [
+      ...(conflicts?.worker_overlaps ?? []),
+      ...(conflicts?.client_same_day ?? []),
+    ];
     return (
-      <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
-        <div>
-          <dt className="text-ink/55">{c.client}</dt>
-          <dd className="font-medium text-ink">{action.display.client_name}</dd>
-        </div>
-        <div>
-          <dt className="text-ink/55">{c.worker}</dt>
-          <dd className="font-medium text-ink">{action.display.worker_name}</dd>
-        </div>
-        <div className="sm:col-span-2">
-          <dt className="text-ink/55">{c.scheduledAt}</dt>
-          <dd className="font-medium text-ink">
-            {action.display.scheduled_at_label}
-          </dd>
-        </div>
-      </dl>
+      <div className="space-y-2">
+        <dl className="grid gap-1.5 text-xs sm:grid-cols-2">
+          <div>
+            <dt className="text-ink/55">{c.client}</dt>
+            <dd className="font-medium text-ink">
+              {action.display.client_name}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-ink/55">{c.worker}</dt>
+            <dd className="font-medium text-ink">
+              {action.display.worker_name}
+            </dd>
+          </div>
+          {action.display.visit_type_label ? (
+            <div>
+              <dt className="text-ink/55">{c.visitType}</dt>
+              <dd className="font-medium text-ink">
+                {action.display.visit_type_label}
+              </dd>
+            </div>
+          ) : null}
+          {action.display.duration_hours_label ? (
+            <div>
+              <dt className="text-ink/55">{c.durationHours}</dt>
+              <dd className="font-medium text-ink">
+                {action.display.duration_hours_label}
+              </dd>
+            </div>
+          ) : null}
+          <div className="sm:col-span-2">
+            <dt className="text-ink/55">{c.scheduledAt}</dt>
+            <dd className="font-medium text-ink">
+              {action.display.scheduled_at_label}
+            </dd>
+          </div>
+        </dl>
+        {conflictRows.length > 0 ? (
+          <div className="rounded-md border border-warning/40 bg-warning/10 px-2.5 py-2 text-xs text-ink/85">
+            <p className="font-medium text-ink">{c.conflictsTitle}</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4">
+              {conflictRows.map((row, i) => (
+                <li key={i}>
+                  {row.broj_naloga ?? "—"}
+                  {row.client_name ? ` · ${row.client_name}` : ""}
+                  {row.assigned_user_name
+                    ? ` · ${row.assigned_user_name}`
+                    : ""}
+                  {row.kind === "worker_overlap"
+                    ? ` (${c.conflictWorker})`
+                    : ` (${c.conflictClientDay})`}
+                </li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-ink/65">{c.conflictsOverrideHint}</p>
+          </div>
+        ) : null}
+      </div>
     );
   }
 

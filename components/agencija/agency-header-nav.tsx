@@ -17,6 +17,7 @@ export function AgencyHeaderNav({
   const links = [
     { href: "/agencija/klijenti", label: m.agencija.nav.clients },
     { href: "/agencija/field-visits", label: m.agencija.nav.fieldVisits },
+    { href: "/agencija/zakazivanje", label: m.agencija.nav.scheduling },
     { href: "/agencija/pretraga", label: m.agencija.nav.search },
     ...(canManageTemplates
       ? [

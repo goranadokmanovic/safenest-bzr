@@ -52,6 +52,8 @@ export type ToolContext = {
   clientIds: string[] | null;
   /** Današnji datum u Europe/Belgrade (YYYY-MM-DD). */
   todayIso: string;
+  /** UI locale (sr/en) — za summary / labele u write predlozima. */
+  locale: "sr" | "en";
 };
 
 export type ToolOutcome =

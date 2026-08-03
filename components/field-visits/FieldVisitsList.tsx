@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getRecords, deleteRecord } from "@/lib/offline/indexedDB";
 import { getPhotosForLocalVisit } from "@/lib/offline/photos";
 import { removeFromQueue } from "@/lib/offline/syncQueue";
@@ -26,16 +26,23 @@ import {
   normalizeVisitStatus,
 } from "@/lib/field-visits/display";
 import {
+  fieldVisitReturnHref,
   isUpcomingFieldVisit,
   type AgencyWorkerOption,
   type FieldVisitListScope,
   type FieldVisitListTime,
 } from "@/lib/field-visits/list";
-
 import type {
   FieldVisitMetadata,
   FieldVisitPhotoDisplay,
 } from "@/lib/field-visits/types";
+
+const VISIT_ID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function isVisitId(value: string): boolean {
+  return VISIT_ID_RE.test(value);
+}
 
 export type FieldVisitServerRow = {
   id: string;
@@ -173,15 +180,30 @@ export function FieldVisitsList({
   clientNames,
   currentUserId,
   workers,
+  deepLinkVisitId = null,
+  deepLinkFrom = null,
 }: {
   serverRows: FieldVisitServerRow[];
   clientNames: Record<string, string>;
   currentUserId: string;
   workers: AgencyWorkerOption[];
+  /** SSR-resolved ?visit= — hides list until modal is ready. */
+  deepLinkVisitId?: string | null;
+  deepLinkFrom?: string | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { m, locale } = useTranslations();
   const fv = m.dashboard.fieldVisits;
+  const deepLinkHandled = useRef(false);
+
+  const visitFromUrl = searchParams.get("visit");
+  const resolvedDeepLinkId =
+    deepLinkVisitId ??
+    (visitFromUrl && isVisitId(visitFromUrl) ? visitFromUrl : null);
+  const resolvedDeepLinkFrom =
+    deepLinkFrom ?? searchParams.get("from") ?? null;
+  const backHref = fieldVisitReturnHref(resolvedDeepLinkFrom);
 
   const [scope, setScope] = useState<FieldVisitListScope>("mine");
   const [time, setTime] = useState<FieldVisitListTime>("upcoming");
@@ -195,10 +217,21 @@ export function FieldVisitsList({
 
   const [localRows, setLocalRows] = useState<FieldVisitDisplayRow[]>([]);
   const [viewRow, setViewRow] = useState<FieldVisitDisplayRow | null>(null);
+  const [highlightVisitId, setHighlightVisitId] = useState<string | null>(null);
+  const [deepLinkPending, setDeepLinkPending] = useState(
+    () => Boolean(resolvedDeepLinkId),
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /** Keep Terenske posete chrome hidden while opening from calendar. */
+  const suppressListChrome =
+    deepLinkPending || Boolean(viewRow && backHref);
+
   useEffect(() => {
+    // After a calendar deep-link we own list state via fetchList — don't
+    // clobber it with the page's default mine/upcoming SSR payload.
+    if (deepLinkHandled.current) return;
     setServerRows(initialServerRows);
   }, [initialServerRows]);
 
@@ -207,7 +240,7 @@ export function FieldVisitsList({
       nextScope: FieldVisitListScope,
       nextTime: FieldVisitListTime,
       filters: FilterDraft,
-    ) => {
+    ): Promise<FieldVisitServerRow[]> => {
       setListLoading(true);
       setListError(null);
       try {
@@ -219,17 +252,91 @@ export function FieldVisitsList({
         };
         if (!res.ok) {
           setListError(json.error ?? m.common.error);
-          return;
+          return [];
         }
-        setServerRows(json.field_visits ?? []);
+        const rows = json.field_visits ?? [];
+        setServerRows(rows);
+        return rows;
       } catch {
         setListError(m.common.networkError);
+        return [];
       } finally {
         setListLoading(false);
       }
     },
     [m.common.error, m.common.networkError],
   );
+
+  const clearVisitQueryParam = useCallback(() => {
+    if (!searchParams.get("visit")) return;
+    const next = new URLSearchParams(searchParams.toString());
+    next.delete("visit");
+    const qs = next.toString();
+    router.replace(qs ? `/agencija/field-visits?${qs}` : "/agencija/field-visits");
+  }, [router, searchParams]);
+
+  useEffect(() => {
+    if (deepLinkHandled.current) return;
+    const visitId = resolvedDeepLinkId;
+    if (!visitId) {
+      setDeepLinkPending(false);
+      return;
+    }
+    deepLinkHandled.current = true;
+    setDeepLinkPending(true);
+
+    const nextScope: FieldVisitListScope =
+      searchParams.get("scope") === "mine" ? "mine" : "all";
+    const nextTime: FieldVisitListTime =
+      searchParams.get("time") === "history" ? "history" : "upcoming";
+
+    setScope(nextScope);
+    setTime(nextTime);
+    if (nextScope === "mine") {
+      setFilterDraft(EMPTY_FILTERS);
+      setAppliedFilters(EMPTY_FILTERS);
+    }
+
+    void (async () => {
+      try {
+        let rows = await fetchList(nextScope, nextTime, EMPTY_FILTERS);
+        let found = rows.find((r) => r.id === visitId);
+        if (!found) {
+          const other: FieldVisitListTime =
+            nextTime === "upcoming" ? "history" : "upcoming";
+          setTime(other);
+          rows = await fetchList(nextScope, other, EMPTY_FILTERS);
+          found = rows.find((r) => r.id === visitId);
+        }
+        if (found) {
+          setError(null);
+          setViewRow({ ...found, isLocal: false });
+          setHighlightVisitId(visitId);
+        } else {
+          setListError(m.common.error);
+        }
+      } finally {
+        setDeepLinkPending(false);
+      }
+    })();
+    // Only bootstrap from the initial URL once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deep-link bootstrap
+  }, [resolvedDeepLinkId, searchParams, fetchList]);
+
+  /* Scroll to the row only after the modal closes — scrolling while the
+     dialog is open fought the shell layout / wide table. */
+  useEffect(() => {
+    if (!highlightVisitId || viewRow) return;
+    const el = document.querySelector<HTMLElement>(
+      `[data-visit-id="${highlightVisitId}"]`,
+    );
+    if (!el) return;
+    el.scrollIntoView({
+      block: "center",
+      inline: "nearest",
+      behavior: "smooth",
+    });
+  }, [highlightVisitId, serverRows, viewRow]);
 
   async function switchScope(next: FieldVisitListScope) {
     if (next === scope) return;
@@ -380,6 +487,8 @@ export function FieldVisitsList({
         router.refresh();
       }
       setViewRow(null);
+      setHighlightVisitId(null);
+      clearVisitQueryParam();
     } catch {
       setError(m.common.networkError);
     } finally {
@@ -391,6 +500,14 @@ export function FieldVisitsList({
 
   return (
     <>
+      {deepLinkPending ? (
+        <p className="py-16 text-center text-sm text-ink/55" role="status">
+          {fv.deepLinkLoading}
+        </p>
+      ) : null}
+
+      {!suppressListChrome ? (
+      <>
       <div className="mt-7 flex flex-col gap-3">
         <div
           className="bzr-tabs bzr-tabs-premium"
@@ -720,10 +837,16 @@ export function FieldVisitsList({
                 const risk = normalizeRiskLevel(metaStr(meta, "risk_level"));
                 const openLabel = `${fv.detailsTitle}: ${row.client_name ?? row.broj_naloga ?? row.id}`;
 
+                const highlighted =
+                  !row.isLocal && highlightVisitId === row.id;
+
                 return (
                   <tr
                     key={row.isLocal ? `local-${row.id}` : row.id}
-                    className="bzr-visit-row cursor-pointer"
+                    data-visit-id={row.isLocal ? undefined : row.id}
+                    className={`bzr-visit-row cursor-pointer${
+                      highlighted ? " bzr-visit-row--deep-link" : ""
+                    }`}
                     tabIndex={0}
                     aria-label={openLabel}
                     onClick={() => {
@@ -830,13 +953,18 @@ export function FieldVisitsList({
           </table>
         </div>
       ) : null}
+      </>
+      ) : null}
 
       {viewRow ? (
         <FieldVisitsModal
           row={viewRow}
+          backHref={backHref}
           onClose={() => {
             setViewRow(null);
             setError(null);
+            setHighlightVisitId(null);
+            clearVisitQueryParam();
           }}
           onOpenParentVisit={(parentId) => {
             const parent = rows.find((r) => !r.isLocal && r.id === parentId);

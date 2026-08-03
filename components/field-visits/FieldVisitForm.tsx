@@ -11,6 +11,12 @@ import type { OfflineRecord } from "@/lib/offline/types";
 
 import type { FieldVisitInsertPayload } from "@/lib/field-visits/types";
 import { formatVisitDate } from "@/lib/field-visits/display";
+import type { SchedulingConflictVisit } from "@/lib/field-visits/scheduling-conflicts";
+import {
+  DEFAULT_VISIT_TYPE,
+  VISIT_TYPE_ORDER,
+  type VisitType,
+} from "@/lib/field-visits/visit-type";
 import { SyncFailedNotice } from "@/components/offline/SyncFailedNotice";
 import { useTranslations } from "@/components/i18n/locale-provider";
 import { useRouter } from "next/navigation";
@@ -87,10 +93,16 @@ export function FieldVisitForm() {
   const [reportTemplateId, setReportTemplateId] = useState("");
   const [clientId, setClientId] = useState("");
   const [visitDate, setVisitDate] = useState(nowLocalInput);
-  const [durationHours, setDurationHours] = useState("");
+  const [durationHours, setDurationHours] = useState("1");
   const [notes, setNotes] = useState("");
   const [riskLevel, setRiskLevel] = useState<RiskLevel>("low");
   const [hitnoOtklanjanje, setHitnoOtklanjanje] = useState(false);
+  const [visitType, setVisitType] = useState<VisitType>(DEFAULT_VISIT_TYPE);
+  const [pendingConflicts, setPendingConflicts] = useState<{
+    worker_overlaps: SchedulingConflictVisit[];
+    client_same_day: SchedulingConflictVisit[];
+  } | null>(null);
+  const acknowledgeConflictsRef = useRef(false);
 
   type ParentCandidate = {
     id: string;
@@ -444,42 +456,86 @@ export function FieldVisitForm() {
     }
   }, [ff, removeRecordedAudio]);
 
-  const onSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      // Sinhrona provera — sprečava dupli submit i pre nego što se "saving" state ažurira.
+  const persistVisit = useCallback(
+    async (acknowledgeConflicts: boolean) => {
       if (savingRef.current) return;
-      setMessage(null);
-
       if (!clientId) {
         setMessage(ff.selectClientError);
         return;
       }
 
+      if (visitType === "control" && !selectedParent) {
+        setMessage(ff.visitTypeHint);
+        return;
+      }
+
       const durationRaw = durationHours.trim()
         ? Number(durationHours.replace(",", "."))
-        : null;
-      // Max 24h — sprečava apsurdne vrednosti tipa "6526h" (npr. sekunde kao sati).
+        : 1;
       const duration =
-        durationRaw !== null &&
         Number.isFinite(durationRaw) &&
         durationRaw > 0 &&
         durationRaw <= 24
           ? durationRaw
           : null;
 
-      if (durationHours.trim() && duration === null) {
+      if (duration === null) {
         setMessage(ff.durationInvalid);
         return;
       }
 
+      const isoDate = visitDate
+        ? new Date(visitDate).toISOString()
+        : new Date().toISOString();
+
+      const effectiveType: VisitType =
+        selectedParent && visitType !== "control" ? "control" : visitType;
+      const parentId =
+        effectiveType === "control" ? (selectedParent?.id ?? null) : null;
+
+      if (isOnline && !acknowledgeConflicts) {
+        try {
+          const checkRes = await fetch(
+            "/api/field-visits/scheduling-conflicts",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                client_company_id: clientId,
+                scheduled_at: isoDate,
+                duration_hours: duration,
+              }),
+            },
+          );
+          const checkJson = (await checkRes.json().catch(() => ({}))) as {
+            conflicts?: {
+              has_conflicts?: boolean;
+              worker_overlaps?: SchedulingConflictVisit[];
+              client_same_day?: SchedulingConflictVisit[];
+            };
+            error?: string;
+          };
+          if (!checkRes.ok) {
+            setMessage(checkJson.error ?? ff.conflictCheckFailed);
+            return;
+          }
+          if (checkJson.conflicts?.has_conflicts) {
+            setPendingConflicts({
+              worker_overlaps: checkJson.conflicts.worker_overlaps ?? [],
+              client_same_day: checkJson.conflicts.client_same_day ?? [],
+            });
+            return;
+          }
+        } catch {
+          setMessage(ff.conflictCheckFailed);
+          return;
+        }
+      }
+
       savingRef.current = true;
       setSaving(true);
+      setPendingConflicts(null);
       try {
-        const isoDate = visitDate
-          ? new Date(visitDate).toISOString()
-          : new Date().toISOString();
-
         const combinedOcr = photos
           .map((p) => p.ocrText.trim())
           .filter(Boolean)
@@ -493,7 +549,9 @@ export function FieldVisitForm() {
           notes: notes.trim() ? notes.trim() : null,
           report_template_id: reportTemplateId || null,
           hitno_otklanjanje: hitnoOtklanjanje,
-          parent_visit_id: selectedParent?.id ?? null,
+          parent_visit_id: parentId,
+          visit_type: effectiveType,
+          acknowledge_conflicts: acknowledgeConflicts || undefined,
           metadata: {
             ...(duration !== null ? { duration_hours: duration } : {}),
             risk_level: riskLevel,
@@ -533,9 +591,10 @@ export function FieldVisitForm() {
         );
 
         setNotes("");
-        setDurationHours("");
+        setDurationHours("1");
         setRiskLevel("low");
         setHitnoOtklanjanje(false);
+        setVisitType(DEFAULT_VISIT_TYPE);
         setSelectedParent(null);
         setParentQuery("");
         setParentCandidates([]);
@@ -549,7 +608,6 @@ export function FieldVisitForm() {
         setVisitDate(nowLocalInput());
         await refreshSaved();
 
-        // Odmah na listu „Moje posete“ (online ili offline lokalni zapis).
         router.push("/agencija/field-visits");
         router.refresh();
       } catch {
@@ -557,6 +615,7 @@ export function FieldVisitForm() {
       } finally {
         savingRef.current = false;
         setSaving(false);
+        acknowledgeConflictsRef.current = false;
       }
     },
     [
@@ -566,6 +625,7 @@ export function FieldVisitForm() {
       notes,
       riskLevel,
       hitnoOtklanjanje,
+      visitType,
       selectedParent,
       photos,
       recordedAudio,
@@ -577,9 +637,18 @@ export function FieldVisitForm() {
       syncData,
       refreshSaved,
       removeRecordedAudio,
-      router,
       ff,
+      router,
     ],
+  );
+
+  const onSubmit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      setMessage(null);
+      await persistVisit(false);
+    },
+    [persistVisit],
   );
 
   const clientName = (id: string) =>
@@ -591,8 +660,66 @@ export function FieldVisitForm() {
       new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   )[0];
 
+  const conflictRows = pendingConflicts
+    ? [
+        ...pendingConflicts.worker_overlaps.map((r) => ({
+          ...r,
+          label: ff.conflictWorker,
+        })),
+        ...pendingConflicts.client_same_day.map((r) => ({
+          ...r,
+          label: ff.conflictClientDay,
+        })),
+      ]
+    : [];
+
   return (
     <div className="mt-8">
+      {pendingConflicts ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="conflict-title"
+        >
+          <div className="w-full max-w-md rounded-xl border border-border/50 bg-surface p-5 shadow-lg">
+            <h2 id="conflict-title" className="text-base font-semibold text-ink">
+              {ff.conflictTitle}
+            </h2>
+            <ul className="mt-3 max-h-48 list-disc space-y-1 overflow-y-auto pl-5 text-sm text-ink/80">
+              {conflictRows.map((row, i) => (
+                <li key={`${row.id}-${i}`}>
+                  {row.broj_naloga ?? "—"}
+                  {row.client_name ? ` · ${row.client_name}` : ""}
+                  {row.assigned_user_name
+                    ? ` · ${row.assigned_user_name}`
+                    : ""}{" "}
+                  <span className="text-ink/55">({row.label})</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                className="rounded-lg border border-border/50 px-3 py-1.5 text-sm text-ink/80"
+                onClick={() => setPendingConflicts(null)}
+              >
+                {ff.conflictCancel}
+              </button>
+              <button
+                type="button"
+                className="rounded-lg bg-accent px-3 py-1.5 text-sm font-medium text-white"
+                onClick={() => {
+                  acknowledgeConflictsRef.current = true;
+                  void persistVisit(true);
+                }}
+              >
+                {ff.conflictProceed}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="mb-6 flex items-center justify-between rounded-md border border-ink/20 bg-surface px-4 py-3 text-sm">
         {!mounted ? (
           <span className="flex items-center gap-2 text-ink/60">
@@ -696,6 +823,35 @@ export function FieldVisitForm() {
 
         <div>
           <label
+            htmlFor="visit_type"
+            className="block text-sm font-medium text-ink"
+          >
+            {ff.visitType}
+          </label>
+          <p className="mt-0.5 text-xs text-ink/60">{ff.visitTypeHint}</p>
+          <select
+            id="visit_type"
+            value={visitType}
+            onChange={(e) => {
+              const next = e.target.value as VisitType;
+              setVisitType(next);
+              if (next !== "control") {
+                setSelectedParent(null);
+                setPredictedBroj(null);
+              }
+            }}
+            className="mt-1 w-full rounded-lg border border-border/40 bg-surface px-3 py-2 text-ink outline-none focus:ring-2 focus:ring-accent"
+          >
+            {VISIT_TYPE_ORDER.map((type) => (
+              <option key={type} value={type}>
+                {ff.visitTypes[type]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label
             htmlFor="parent_visit"
             className="block text-sm font-medium text-ink"
           >
@@ -780,6 +936,7 @@ export function FieldVisitForm() {
                           className="flex w-full flex-col items-start gap-0.5 border-b border-ink/10 px-3 py-2 text-left hover:bg-ink/[0.04]"
                           onClick={() => {
                             setSelectedParent(c);
+                            setVisitType("control");
                             setParentQuery("");
                             void (async () => {
                               try {
@@ -852,6 +1009,7 @@ export function FieldVisitForm() {
           >
             {ff.durationHours}
           </label>
+          <p className="mt-0.5 text-xs text-ink/60">{ff.durationHint}</p>
           <input
             id="duration"
             type="number"

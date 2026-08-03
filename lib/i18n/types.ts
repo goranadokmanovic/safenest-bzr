@@ -262,9 +262,10 @@ export type Messages = {
   };
   agencija: {
     title: string;
-    nav: {
+      nav: {
       clients: string;
       fieldVisits: string;
+      scheduling: string;
       search: string;
       reportTemplates: string;
       invites: string;
@@ -281,6 +282,26 @@ export type Messages = {
       linkReportTemplates: string;
       linkInvites: string;
       linkDelegations: string;
+    };
+    scheduling: {
+      title: string;
+      intro: string;
+      viewDay: string;
+      viewWeek: string;
+      viewMonth: string;
+      moreVisits: string;
+      viewGroupLabel: string;
+      navGroupLabel: string;
+      prev: string;
+      next: string;
+      today: string;
+      newVisit: string;
+      empty: string;
+      unassigned: string;
+      tipClient: string;
+      tipWorker: string;
+      loading: string;
+      loadError: string;
     };
     delegations: {
       title: string;
@@ -562,6 +583,10 @@ export type Messages = {
       photoOcrConfidence: string;
       photoExtractedDates: string;
       close: string;
+      /** Nazad kada je pregled otvoren iz kalendara. */
+      backToCalendar: string;
+      /** Dok se deep-link poseta učitava (bez flash-a liste). */
+      deepLinkLoading: string;
       hoursSuffix: string;
       durationInProgress: string;
       riskLow: string;
@@ -585,9 +610,25 @@ export type Messages = {
         durationHours: string;
         durationPlaceholder: string;
         durationInvalid: string;
+        durationHint: string;
         riskLevel: string;
         hitnoOtklanjanje: string;
         hitnoOtklanjanjeHint: string;
+        visitType: string;
+        visitTypeHint: string;
+        visitTypes: {
+          initial: string;
+          periodic: string;
+          control: string;
+          extraordinary: string;
+          advisory: string;
+        };
+        conflictTitle: string;
+        conflictWorker: string;
+        conflictClientDay: string;
+        conflictProceed: string;
+        conflictCancel: string;
+        conflictCheckFailed: string;
         brojNalogaHint: string;
         controlVisitLabel: string;
         controlVisitHint: string;
@@ -681,6 +722,7 @@ export type Messages = {
         getEmployeesWithoutComplianceRecords: string;
         getClientSummary: string;
         getMyAssignedClients: string;
+        generateClientMonthlyReport: string;
         searchFieldVisits: string;
         createFieldVisit: string;
         updateComplianceRecordExpiry: string;
@@ -695,6 +737,12 @@ export type Messages = {
         client: string;
         worker: string;
         scheduledAt: string;
+        visitType: string;
+        durationHours: string;
+        conflictsTitle: string;
+        conflictWorker: string;
+        conflictClientDay: string;
+        conflictsOverrideHint: string;
         subject: string;
         recordType: string;
         category: string;
@@ -709,6 +757,49 @@ export type Messages = {
           createFieldVisit: string;
           updateComplianceRecordExpiry: string;
           assignCollaboratorToClient: string;
+        };
+      };
+      monthlyReport: {
+        summaryLine: string;
+        visitsHeading: string;
+        complianceHeading: string;
+        downloadExcel: string;
+        downloading: string;
+        downloadFailed: string;
+        emptyVisits: string;
+        emptyCompliance: string;
+        truncatedVisits: string;
+        truncatedCompliance: string;
+        colDate: string;
+        colStatus: string;
+        colRisk: string;
+        colNotes: string;
+        colAssignee: string;
+        colSubject: string;
+        colRecordType: string;
+        colExpiry: string;
+        colCategory: string;
+        sheetVisits: string;
+        sheetCompliance: string;
+        visitStatus: {
+          scheduled: string;
+          in_progress: string;
+          completed: string;
+          cancelled: string;
+          draft: string;
+          unknown: string;
+        };
+        risk: {
+          low: string;
+          medium: string;
+          high: string;
+          unknown: string;
+        };
+        complianceStatus: {
+          expired: string;
+          expiring: string;
+          valid: string;
+          missing: string;
         };
       };
     };

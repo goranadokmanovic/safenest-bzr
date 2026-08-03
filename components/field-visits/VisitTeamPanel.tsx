@@ -104,12 +104,12 @@ export function VisitTeamPanel({
 
       {canManage && !disabled ? (
         <div className="mt-2 space-y-2">
-          <div className="flex flex-wrap gap-2">
+          <div className="relative z-10 flex flex-wrap gap-2">
             <select
               value={selected}
               onChange={(e) => setSelected(e.target.value)}
               disabled={busy || available.length === 0}
-              className="min-w-[12rem] flex-1 rounded-lg border border-border/40 bg-surface px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
+              className="relative z-10 min-w-[12rem] flex-1 rounded-lg border border-accent/50 bg-surface px-2 py-1.5 text-xs outline-none focus:ring-2 focus:ring-accent"
             >
               <option value="">{fv.visitWorkersSelect}</option>
               {available.map((w) => (
